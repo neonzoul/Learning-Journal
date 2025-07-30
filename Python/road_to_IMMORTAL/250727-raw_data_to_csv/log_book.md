@@ -1,0 +1,10 @@
+1. install pandas
+   [[
+   == Python pandas tool kit ==
+   Description : Data Manipulation and Analysis
+   Use Case : </br>
+
+    - Import/Export file ( e.g. CSV, JSON, Excel, SQL. )
+    - Data Manipulation ( Cleaning, Filter, Tranforming, Grouping)
+
+    ]]

@@ -1,0 +1,26 @@
+---
+config:
+  layout: fixed
+---
+flowchart TD
+    A["Start"] --> B{"รับ 1 Command-Line Argument?"}
+    B -- No --> C["Print Usage Error & End"]
+    B -- Yes --> D{"เปิดไฟล์ card.raw สำเร็จ?"}
+    D -- No --> E["Print File Error & End"]
+    D -- Yes --> F["เตรียมตัวแปร: counter = 0, output_file = NULL"]
+    F --> G{"Loop: อ่าน 512 bytes จาก card.raw สำเร็จ?"}
+    G -- Yes --> H{"4 bytes แรกคือลายเซ็น JPEG?"}
+    G -- No --> Q["ปิดไฟล์ JPEG สุดท้าย"]
+    H -- Yes --> I{"มีไฟล์ JPEG เปิดอยู่?"}
+    I -- Yes --> J["ปิดไฟล์ JPEG เก่า"]
+    I -- No --> K["สร้างชื่อไฟล์ใหม่"]
+    J --> K
+    K --> L["เปิดไฟล์ใหม่สำหรับเขียน"]
+    L --> M["เขียน 512 bytes ปัจจุบันลงไฟล์ใหม่"]
+    M --> G
+    H -- No --> N{"มีไฟล์ JPEG เปิดอยู่?"}
+    N -- Yes --> O["เขียน 512 bytes ปัจจุบันต่อไฟล์เดิม"]
+    N -- No --> G
+    O --> G
+    Q --> R["ปิดไฟล์ card.raw"]
+    R --> S["End"]

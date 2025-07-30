@@ -1,0 +1,100 @@
+// {
+//     "workbench.editor.empty.hint": "hidden",
+//     "workbench.secondarySideBar.showLabels": false,
+
+//     // ---- theme color ---- //
+//     "workbench.colorCustomizations": {
+//         // code background
+//         "editor.background": "#1a1826",
+//         // ---- Main UI Bars ----
+//         "sideBar.background": "#1f1d2b", // Side Bar
+//         "activityBar.background": "#1f1d2b", // Left icon bar color
+//         "titleBar.activeForeground": "#f5f0ed", // Top bar text color
+//         "titleBar.activeBackground": "#1f1d2b", // Top bar color (active window)
+//         "statusBar.background": "#1f1d2b", // Bottom bar color
+//         "statusBar.noFolderBackground": "#1f1d2b", // Bottom bar when no folder is open
+//         "statusBar.debuggingBackground": "#561f3d", // contrasting Bottom bar during debugging
+
+//         // guide line color
+//         // Indent Guide (inactive)
+//         "editorIndentGuide.background1": "#FFFFFF25",
+//         "editorIndentGuide.background2": "#FFFFFF25",
+//         "editorIndentGuide.background3": "#FFFFFF25",
+//         "editorIndentGuide.background4": "#FFFFFF25",
+//         "editorIndentGuide.background5": "#FFFFFF25",
+//         "editorIndentGuide.background6": "#FFFFFF25",
+//         // Indent Guide (active)
+//         "editorIndentGuide.activeBackground1": "#ffffffa1",
+//         "editorIndentGuide.activeBackground2": "#ffffffa1",
+//         "editorIndentGuide.activeBackground3": "#ffffffa1",
+//         "editorIndentGuide.activeBackground4": "#ffffffa1",
+//         "editorIndentGuide.activeBackground5": "#ffffffa1",
+//         "editorIndentGuide.activeBackground6": "#ffffffa1"
+//     },
+
+//     "editor.tokenColorCustomizations": {
+//         // comment color.
+//         "comments": "#a3a1aac9",
+
+//         // color with scope. | (check scope with "Developer: Inspect Editor Tokens and Scopes")
+//         "textMateRules": [
+//             {
+//                 // html text color
+//                 "scope": "text.html",
+//                 "settings": {
+//                     "foreground": "#f1e7e7"
+//                 }
+//             },
+//             // .md normal text color.
+//             {
+//                 "scope": "text.html.markdown",
+//                 "settings": {
+//                     "foreground": "#f1e7e7"
+//                 }
+//             }
+//         ]
+//     },
+
+//     //////////////////////////////////////
+//     //////////////////////////////////////
+//     //////////////////////////////////////
+//     // Auto Formatter//
+//     //////////////////////////////////////
+//     //////////////////////////////////////
+//     //////////////////////////////////////
+//     "editor.defaultFormatter": "esbenp.prettier-vscode",
+//     "editor.formatOnSave": true,
+//     "prettier.semi": true,
+//     "prettier.tabWidth": 4,
+//     "prettier.singleQuote": true,
+//     "prettier.trailingComma": "es5",
+//     "prettier.bracketSameLine": true,
+//     "eslint.format.enable": true,
+//     "git.autofetch": true,
+//     "terminal.integrated.defaultProfile.windows": "Git Bash",
+//     "codeium.enableConfig": {
+//         "*": false
+//     },
+//     "codeium.enableCodeLens": "hide_x",
+//     "workbench.colorTheme": "Arbiter",
+//     "workbench.iconTheme": "material-icon-theme",
+//     "git.openRepositoryInParentFolders": "never",
+//     "editor.inlineSuggest.edits.showCollapsed": true,
+//     "editor.inlineSuggest.enabled": false,
+
+//     // --- Disable Automatic Suggestions ----
+//     "editor.quickSuggestions": {
+//         "other": "off",
+//         "comments": "off",
+//         "strings": "off"
+//     },
+//     "editor.suggestOnTriggerCharacters": false,
+//     "editor.parameterHints.enabled": true,
+//     "github.copilot.nextEditSuggestions.enabled": true,
+//     "github.copilot.enable": {
+//         "*": false,
+//         "plaintext": false,
+//         "markdown": false,
+//         "scminput": false
+//     }
+// }

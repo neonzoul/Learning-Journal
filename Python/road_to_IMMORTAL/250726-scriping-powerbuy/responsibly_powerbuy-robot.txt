@@ -1,0 +1,26 @@
+User-agent:*
+Disallow: /signin
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /cart
+Disallow: /checkout
+Disallow: /success
+Disallow: /wp-admin/
+Disallow: /profile/
+Disallow: /bonjour
+Disallow: /payment
+Disallow: /thankyou
+Disallow: /logout/
+Disallow: *?brand=*
+Disallow: *?redirect=*
+Disallow: *?fill=*
+Disallow: *?cal=*
+Disallow: *?ship=*
+Disallow: *?orderBy=*
+Disallow: /api/
+Disallow: *-mkp*
+Allow: /api/v2/allcats
+Disallow: /event/
+Disallow: /cdn-cgi/
+Allow: /api/page
+Sitemap: https://www.powerbuy.co.th/sitemap.xml

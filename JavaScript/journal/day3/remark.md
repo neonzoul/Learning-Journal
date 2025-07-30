@@ -1,0 +1,1 @@
+-   for project price-checker can try with peudocode and write by yourself to especially function displayPriceReport after got raw data from fetch. This can improve if else,nest loop, split data from Array, front-end relation about HTML and JavaScript.

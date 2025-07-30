@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="th">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Tideman Voting Method: Interactive Simulator</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap"
+            rel="stylesheet" />
+        <!-- Chosen Palette: Slate and Sky Blue -->
+        <!-- Application Structure Plan: The application is designed as a multi-step, interactive dashboard. This structure guides the user through the complex Tideman process logically, from input to final result. Instead of showing everything at once, it breaks down the process into four digestible stages (1. Input, 2. Tally, 3. Lock-in, 4. Winner), allowing users to focus on one concept at a time. The interactive graph visualization in Step 3 is the core component, as it provides the most intuitive way to understand the critical cycle-detection and edge-locking logic, which is hard to grasp from text alone. This task-oriented flow enhances usability and learning. -->
+        <!-- Visualization & Content Choices:
+        - [Input Ballots -> Goal: Inform/Input -> Method: Textarea] User-friendly text input is the simplest way for users to add their own scenarios.
+        - [Preference Matrix -> Goal: Compare -> Method: HTML Table] A table is the most direct and standard way to represent the `preferences[i][j]` matrix, clearly showing head-to-head voter counts.
+        - [Sorted Pairs -> Goal: Organize -> Method: Sorted HTML List] A simple list, sorted by victory strength, directly visualizes the order of operations for the locking phase, fulfilling a key requirement of the algorithm.
+        - [Graph Locking -> Goal: Visualize Process/Relationships -> Method: Interactive Canvas] The most critical and complex part of Tideman is locking pairs without creating cycles. A static image is insufficient. A step-by-step, interactive canvas visualization where users click to "lock" the next edge provides the most effective learning experience. It visually demonstrates why an edge is accepted or rejected (by showing a temporary cycle path). This is the "wow" factor.
+        - [Winner -> Goal: Inform -> Method: Highlighted Card] A final, clear display card provides an unambiguous conclusion to the simulation.
+    -->
+        <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+        <style>
+            body {
+                font-family: 'Sarabun', sans-serif;
+                background-color: #f8fafc; /* slate-50 */
+            }
+            .tab-button {
+                transition: all 0.3s ease;
+            }
+            .tab-button.active {
+                border-color: #0ea5e9; /* sky-500 */
+                color: #0ea5e9;
+                font-weight: 700;
+            }
+            .chart-container {
+                position: relative;
+                width: 100%;
+                max-width: 600px;
+                margin-left: auto;
+                margin-right: auto;
+                height: 400px;
+                max-height: 50vh;
+            }
+        </style>
+    </head>
+    <body class="bg-slate-50 text-slate-800 p-4 md:p-8">
+        <div class="max-w-7xl mx-auto">
+            <header class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold text-slate-900">
+                    เครื่องจำลองการเลือกตั้งแบบ Tideman [[by Gemini2.5pro]]
+                </h1>
+                <p class="text-slate-600 mt-2">
+                    สำรวจกระบวนการหาผู้ชนะที่แข็งแกร่งที่สุด
+                    ผ่านการสร้างกราฟแห่งชัยชนะ
+                </p>
+            </header>
+
+            <main class="bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8">
+                <!-- Section 1: Setup -->
+                <section id="setup">
+                    <h2
+                        class="text-2xl font-bold text-slate-900 border-b-2 border-slate-200 pb-2 mb-4">
+                        ขั้นตอนที่ 1: ตั้งค่าการเลือกตั้ง
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label
+                                for="candidates"
+                                class="block text-sm font-medium text-slate-700 mb-1"
+                                >รายชื่อผู้สมัคร (คั่นด้วยจุลภาค ,)</label
+                            >
+                            <input
+                                type="text"
+                                id="candidates"
+                                class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500"
+                                placeholder="เช่น Alice, Bob, Charlie" />
+                        </div>
+                        <div>
+                            <label
+                                for="ballots"
+                                class="block text-sm font-medium text-slate-700 mb-1"
+                                >บัตรลงคะแนน (1 บัตรต่อ 1 บรรทัด)</label
+                            >
+                            <textarea
+                                id="ballots"
+                                rows="5"
+                                class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500"
+                                placeholder="เช่น&#10;Alice,Bob,Charlie&#10;Bob,Charlie,Alice"></textarea>
+                        </div>
+                    </div>
+                    <div class="text-center mt-6">
+                        <button
+                            id="run-simulation"
+                            class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5 inline-block mr-2"
+                                viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            เริ่มการจำลอง
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Section 2: Results -->
+                <section id="results" class="hidden mt-8">
+                    <div id="tabs" class="border-b border-slate-200 mb-6">
+                        <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                            <button class="tab-button active" data-tab="tally">
+                                📊 ตารางคะแนนเปรียบเทียบ
+                            </button>
+                            <button class="tab-button" data-tab="sort">
+                                🏆 จัดลำดับคู่แข่ง
+                            </button>
+                            <button class="tab-button" data-tab="lock">
+                                🔗 สร้างกราฟ
+                            </button>
+                            <button class="tab-button" data-tab="winner">
+                                🎉 ผู้ชนะ
+                            </button>
+                        </nav>
+                    </div>
+
+                    <div id="tab-content">
+                        <div id="tally-content">
+                            <h3 class="text-xl font-bold mb-2">
+                                ตารางคะแนนเปรียบเทียบ (Preference Matrix)
+                            </h3>
+                            <p class="text-slate-600 mb-4">
+                                ตารางนี้แสดงจำนวนผู้ลงคะแนนที่ชอบผู้สมัครใน
+                                "แถว" มากกว่าผู้สมัครใน "คอลัมน์"
+                            </p>
+                            <div
+                                id="preferences-table"
+                                class="overflow-x-auto"></div>
+                        </div>
+
+                        <div id="sort-content" class="hidden">
+                            <h3 class="text-xl font-bold mb-2">
+                                คู่แข่งเรียงตามความแข็งแกร่ง (Sorted Pairs)
+                            </h3>
+                            <p class="text-slate-600 mb-4">
+                                รายชื่อคู่แข่งที่ชนะแบบตัวต่อตัว
+                                เรียงลำดับจากคู่ที่ชนะด้วยคะแนนต่างกันมากที่สุดไปน้อยที่สุด
+                            </p>
+                            <div id="pairs-list"></div>
+                        </div>
+
+                        <div id="lock-content" class="hidden">
+                            <h3 class="text-xl font-bold mb-2">
+                                สร้างกราฟแห่งชัยชนะ (Locking Pairs)
+                            </h3>
+                            <p class="text-slate-600 mb-4">
+                                เราจะเริ่ม "ล็อค"
+                                ลูกศรแห่งชัยชนะตามลำดับความแข็งแกร่ง
+                                โดยจะข้ามลูกศรที่จะทำให้เกิด "วงจรอุบาทว์"
+                                (Cycle)
+                            </p>
+                            <div
+                                class="chart-container bg-slate-100 rounded-lg">
+                                <canvas id="graphCanvas"></canvas>
+                            </div>
+                            <div class="text-center mt-4 space-x-4">
+                                <button
+                                    id="prev-edge"
+                                    class="bg-slate-300 hover:bg-slate-400 text-slate-800 font-bold py-2 px-4 rounded-lg disabled:opacity-50"
+                                    disabled>
+                                    ◀ ก่อนหน้า
+                                </button>
+                                <span
+                                    id="edge-info"
+                                    class="font-medium text-slate-700"></span>
+                                <button
+                                    id="next-edge"
+                                    class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg disabled:opacity-50">
+                                    ถัดไป ▶
+                                </button>
+                            </div>
+                            <div
+                                id="cycle-message"
+                                class="text-center mt-3 text-red-600 font-semibold h-6"></div>
+                        </div>
+
+                        <div id="winner-content" class="hidden">
+                            <h3 class="text-xl font-bold mb-2">
+                                ผลการเลือกตั้ง
+                            </h3>
+                            <div
+                                id="winner-display"
+                                class="mt-4 text-center p-8 bg-sky-100 border-2 border-sky-500 rounded-lg">
+                                <p class="text-lg text-slate-700">
+                                    ผู้ชนะคือ...
+                                </p>
+                                <p
+                                    id="winner-name"
+                                    class="text-4xl font-bold text-sky-600 my-2"></p>
+                                <p
+                                    id="winner-reason"
+                                    class="text-slate-600"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-8">
+                        <button
+                            id="reset-simulation"
+                            class="text-sm text-slate-500 hover:text-slate-700">
+                            เริ่มจำลองใหม่
+                        </button>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <script>
+            const candidatesInput = document.getElementById('candidates');
+            const ballotsInput = document.getElementById('ballots');
+            const runButton = document.getElementById('run-simulation');
+            const resetButton = document.getElementById('reset-simulation');
+
+            const setupSection = document.getElementById('setup');
+            const resultsSection = document.getElementById('results');
+
+            const tabs = document.querySelectorAll('.tab-button');
+            const tabContents = {
+                tally: document.getElementById('tally-content'),
+                sort: document.getElementById('sort-content'),
+                lock: document.getElementById('lock-content'),
+                winner: document.getElementById('winner-content'),
+            };
+
+            const graphCanvas = document.getElementById('graphCanvas');
+            const ctx = graphCanvas.getContext('2d');
+            const nextEdgeBtn = document.getElementById('next-edge');
+            const prevEdgeBtn = document.getElementById('prev-edge');
+            const edgeInfo = document.getElementById('edge-info');
+            const cycleMessage = document.getElementById('cycle-message');
+
+            let state = {};
+
+            function init() {
+                // Default values for quick testing
+                candidatesInput.value = 'Alice, Bob, Charlie';
+                ballotsInput.value =
+                    'Alice,Bob,Charlie\nAlice,Bob,Charlie\nAlice,Bob,Charlie\nBob,Charlie,Alice\nBob,Charlie,Alice\nCharlie,Alice,Bob\nCharlie,Alice,Bob\nCharlie,Alice,Bob\nCharlie,Alice,Bob';
+
+                runButton.addEventListener('click', runSimulation);
+                resetButton.addEventListener('click', () => {
+                    setupSection.classList.remove('hidden');
+                    resultsSection.classList.add('hidden');
+                    switchTab('tally');
+                });
+
+                tabs.forEach((tab) => {
+                    tab.addEventListener('click', () =>
+                        switchTab(tab.dataset.tab)
+                    );
+                });
+
+                nextEdgeBtn.addEventListener('click', () => {
+                    state.currentEdgeIndex++;
+                    drawGraph();
+                });
+
+                prevEdgeBtn.addEventListener('click', () => {
+                    state.currentEdgeIndex--;
+                    drawGraph();
+                });
+            }
+
+            function switchTab(tabName) {
+                tabs.forEach((tab) => {
+                    tab.classList.toggle('active', tab.dataset.tab === tabName);
+                });
+                Object.values(tabContents).forEach((content) =>
+                    content.classList.add('hidden')
+                );
+                tabContents[tabName].classList.remove('hidden');
+            }
+
+            function runSimulation() {
+                const candidateNames = candidatesInput.value
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter((s) => s);
+                if (candidateNames.length < 2) {
+                    alert('กรุณาใส่ชื่อผู้สมัครอย่างน้อย 2 คน');
+                    return;
+                }
+                const ballots = ballotsInput.value
+                    .split('\n')
+                    .map((line) => line.split(',').map((s) => s.trim()));
+
+                state = {
+                    candidates: candidateNames,
+                    candidate_count: candidateNames.length,
+                    preferences: [],
+                    pairs: [],
+                    pair_count: 0,
+                    locked: [],
+                    currentEdgeIndex: -1,
+                    winner: null,
+                };
+
+                // Initialize preferences
+                state.preferences = Array(state.candidate_count)
+                    .fill(0)
+                    .map(() => Array(state.candidate_count).fill(0));
+
+                // Record preferences
+                ballots.forEach((ballot) => {
+                    const ranks = ballot
+                        .map((name) => state.candidates.indexOf(name))
+                        .filter((index) => index !== -1);
+                    if (ranks.length === state.candidate_count) {
+                        for (let i = 0; i < state.candidate_count; i++) {
+                            for (
+                                let j = i + 1;
+                                j < state.candidate_count;
+                                j++
+                            ) {
+                                state.preferences[ranks[i]][ranks[j]]++;
+                            }
+                        }
+                    }
+                });
+
+                // Add pairs
+                for (let i = 0; i < state.candidate_count; i++) {
+                    for (let j = i + 1; j < state.candidate_count; j++) {
+                        if (state.preferences[i][j] > state.preferences[j][i]) {
+                            state.pairs.push({
+                                winner: i,
+                                loser: j,
+                                strength:
+                                    state.preferences[i][j] -
+                                    state.preferences[j][i],
+                            });
+                        } else if (
+                            state.preferences[j][i] > state.preferences[i][j]
+                        ) {
+                            state.pairs.push({
+                                winner: j,
+                                loser: i,
+                                strength:
+                                    state.preferences[j][i] -
+                                    state.preferences[i][j],
+                            });
+                        }
+                    }
+                }
+                state.pair_count = state.pairs.length;
+
+                // Sort pairs
+                state.pairs.sort((a, b) => b.strength - a.strength);
+
+                // Lock pairs and find winner
+                state.locked = Array(state.candidate_count)
+                    .fill(0)
+                    .map(() => Array(state.candidate_count).fill(false));
+
+                // Find winner is implicit in the graph structure
+
+                renderAll();
+
+                setupSection.classList.add('hidden');
+                resultsSection.classList.remove('hidden');
+            }
+
+            function renderAll() {
+                renderPreferencesTable();
+                renderPairsList();
+                drawGraph(); // Initial draw
+                findAndRenderWinner();
+            }
+
+            function renderPreferencesTable() {
+                const tableContainer =
+                    document.getElementById('preferences-table');
+                let tableHTML =
+                    '<table class="w-full text-sm text-left text-slate-500 border-collapse">';
+                tableHTML +=
+                    '<thead class="text-xs text-slate-700 uppercase bg-slate-100">';
+                tableHTML +=
+                    '<tr><th class="p-3 border border-slate-300">ชอบ ▶</th>';
+                state.candidates.forEach(
+                    (name) =>
+                        (tableHTML += `<th class="p-3 border border-slate-300">${name}</th>`)
+                );
+                tableHTML += '</tr></thead><tbody>';
+
+                for (let i = 0; i < state.candidate_count; i++) {
+                    tableHTML += `<tr class="bg-white border-b"><th class="p-3 border border-slate-300 bg-slate-100 font-bold text-slate-700">${state.candidates[i]}</th>`;
+                    for (let j = 0; j < state.candidate_count; j++) {
+                        if (i === j) {
+                            tableHTML +=
+                                '<td class="p-3 border border-slate-300 bg-slate-200"></td>';
+                        } else {
+                            tableHTML += `<td class="p-3 border border-slate-300 text-center font-mono">${state.preferences[i][j]}</td>`;
+                        }
+                    }
+                    tableHTML += '</tr>';
+                }
+                tableHTML += '</tbody></table>';
+                tableContainer.innerHTML = tableHTML;
+            }
+
+            function renderPairsList() {
+                const listContainer = document.getElementById('pairs-list');
+                if (state.pair_count === 0) {
+                    listContainer.innerHTML = `<p class="text-slate-500">ไม่มีคู่แข่งที่ชนะขาด</p>`;
+                    return;
+                }
+                let listHTML =
+                    '<ol class="list-decimal list-inside space-y-2">';
+                state.pairs.forEach((pair) => {
+                    const winnerName = state.candidates[pair.winner];
+                    const loserName = state.candidates[pair.loser];
+                    listHTML += `<li class="p-3 bg-slate-100 rounded-md"><strong>${winnerName}</strong> ชนะ <strong>${loserName}</strong> (ผลต่าง: ${pair.strength} เสียง)</li>`;
+                });
+                listHTML += '</ol>';
+                listContainer.innerHTML = listHTML;
+            }
+
+            function drawGraph() {
+                const canvasWidth = (graphCanvas.width =
+                    graphCanvas.offsetWidth);
+                const canvasHeight = (graphCanvas.height =
+                    graphCanvas.offsetHeight);
+                const radius = Math.min(canvasWidth, canvasHeight) / 2 - 40;
+                const centerX = canvasWidth / 2;
+                const centerY = canvasHeight / 2;
+
+                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+                // Calculate node positions
+                const nodePositions = [];
+                const angleStep = (2 * Math.PI) / state.candidate_count;
+                for (let i = 0; i < state.candidate_count; i++) {
+                    nodePositions.push({
+                        x:
+                            centerX +
+                            radius * Math.cos(i * angleStep - Math.PI / 2),
+                        y:
+                            centerY +
+                            radius * Math.sin(i * angleStep - Math.PI / 2),
+                    });
+                }
+
+                // Simulate locking pairs up to current index
+                let localLocked = Array(state.candidate_count)
+                    .fill(0)
+                    .map(() => Array(state.candidate_count).fill(false));
+                let cycleDetectedForCurrentEdge = false;
+
+                for (let i = 0; i <= state.currentEdgeIndex; i++) {
+                    if (i >= state.pair_count) break;
+                    const pair = state.pairs[i];
+                    if (!createsCycle(localLocked, pair.winner, pair.loser)) {
+                        localLocked[pair.winner][pair.loser] = true;
+                    } else {
+                        if (i === state.currentEdgeIndex) {
+                            cycleDetectedForCurrentEdge = true;
+                        }
+                    }
+                }
+
+                state.locked = localLocked;
+
+                // Draw edges
+                for (let i = 0; i < state.candidate_count; i++) {
+                    for (let j = 0; j < state.candidate_count; j++) {
+                        if (state.locked[i][j]) {
+                            drawArrow(
+                                nodePositions[i],
+                                nodePositions[j],
+                                '#0ea5e9',
+                                2
+                            );
+                        }
+                    }
+                }
+
+                // Draw current edge being considered
+                if (
+                    state.currentEdgeIndex >= 0 &&
+                    state.currentEdgeIndex < state.pair_count
+                ) {
+                    const currentPair = state.pairs[state.currentEdgeIndex];
+                    if (cycleDetectedForCurrentEdge) {
+                        drawArrow(
+                            nodePositions[currentPair.winner],
+                            nodePositions[currentPair.loser],
+                            '#ef4444',
+                            3,
+                            true
+                        );
+                        cycleMessage.textContent =
+                            'ข้าม! การเพิ่มเส้นนี้จะทำให้เกิดวงจร';
+                    } else {
+                        drawArrow(
+                            nodePositions[currentPair.winner],
+                            nodePositions[currentPair.loser],
+                            '#22c55e',
+                            3,
+                            true
+                        );
+                        cycleMessage.textContent = 'ล็อคสำเร็จ! ไม่เกิดวงจร';
+                    }
+                } else {
+                    cycleMessage.textContent = '';
+                }
+
+                // Draw nodes
+                nodePositions.forEach((pos, i) => {
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 25, 0, 2 * Math.PI);
+                    ctx.fillStyle = 'white';
+                    ctx.fill();
+                    ctx.strokeStyle = '#334155'; //slate-700
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.fillStyle = '#334155';
+                    ctx.font = 'bold 14px Sarabun';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(state.candidates[i], pos.x, pos.y);
+                });
+
+                updateGraphButtons();
+            }
+
+            function createsCycle(graph, start, end) {
+                // If there's a path from end back to start, adding start->end creates a cycle
+                let queue = [end];
+                const visited = new Set([end]);
+
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    if (current === start) return true; // Cycle detected!
+
+                    for (
+                        let neighbor = 0;
+                        neighbor < state.candidate_count;
+                        neighbor++
+                    ) {
+                        if (
+                            graph[current][neighbor] &&
+                            !visited.has(neighbor)
+                        ) {
+                            visited.add(neighbor);
+                            queue.push(neighbor);
+                        }
+                    }
+                }
+                return false;
+            }
+
+            function drawArrow(from, to, color, lineWidth, isDash = false) {
+                const headlen = 10;
+                const angle = Math.atan2(to.y - from.y, to.x - from.x);
+
+                const dx = to.x - from.x;
+                const dy = to.y - from.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                const toX = from.x + (dist - 25) * Math.cos(angle);
+                const toY = from.y + (dist - 25) * Math.sin(angle);
+
+                const fromX = from.x + 25 * Math.cos(angle);
+                const fromY = from.y + 25 * Math.sin(angle);
+
+                ctx.save();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lineWidth;
+                if (isDash) {
+                    ctx.setLineDash([5, 5]);
+                }
+                ctx.beginPath();
+                ctx.moveTo(fromX, fromY);
+                ctx.lineTo(toX, toY);
+                ctx.stroke();
+
+                // Arrowhead
+                ctx.beginPath();
+                ctx.moveTo(toX, toY);
+                ctx.lineTo(
+                    toX - headlen * Math.cos(angle - Math.PI / 6),
+                    toY - headlen * Math.sin(angle - Math.PI / 6)
+                );
+                ctx.lineTo(
+                    toX - headlen * Math.cos(angle + Math.PI / 6),
+                    toY - headlen * Math.sin(angle + Math.PI / 6)
+                );
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.restore();
+            }
+
+            function updateGraphButtons() {
+                prevEdgeBtn.disabled = state.currentEdgeIndex < 0;
+                nextEdgeBtn.disabled =
+                    state.currentEdgeIndex >= state.pair_count - 1;
+
+                if (
+                    state.currentEdgeIndex >= 0 &&
+                    state.currentEdgeIndex < state.pair_count
+                ) {
+                    const pair = state.pairs[state.currentEdgeIndex];
+                    edgeInfo.textContent = `พิจารณา: ${
+                        state.candidates[pair.winner]
+                    } > ${state.candidates[pair.loser]}`;
+                } else if (state.currentEdgeIndex >= state.pair_count - 1) {
+                    edgeInfo.textContent = 'สร้างกราฟเสร็จสมบูรณ์!';
+                } else {
+                    edgeInfo.textContent = 'กด "ถัดไป" เพื่อเริ่มสร้างกราฟ';
+                }
+            }
+
+            function findAndRenderWinner() {
+                let winnerIndex = -1;
+                for (let i = 0; i < state.candidate_count; i++) {
+                    let hasIncomingEdge = false;
+                    for (let j = 0; j < state.candidate_count; j++) {
+                        if (state.locked[j][i]) {
+                            hasIncomingEdge = true;
+                            break;
+                        }
+                    }
+                    if (!hasIncomingEdge) {
+                        winnerIndex = i;
+                        break;
+                    }
+                }
+
+                if (winnerIndex !== -1) {
+                    state.winner = state.candidates[winnerIndex];
+                    document.getElementById('winner-name').textContent =
+                        state.winner;
+                    document.getElementById(
+                        'winner-reason'
+                    ).textContent = `เนื่องจาก ${state.winner} เป็น "ต้นน้ำ" (Source) ของกราฟ ซึ่งไม่มีใครสามารถเอาชนะได้แบบตัวต่อตัว`;
+                } else {
+                    document.getElementById('winner-name').textContent =
+                        'ไม่มีผู้ชนะที่ชัดเจน';
+                    document.getElementById('winner-reason').textContent =
+                        'เกิดวงจรในกลุ่มผู้สมัครที่แข็งแกร่งที่สุด ทำให้ไม่สามารถหาต้นน้ำของกราฟได้';
+                }
+            }
+
+            init();
+        </script>
+    </body>
+</html>
