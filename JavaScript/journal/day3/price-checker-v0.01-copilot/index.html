@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="style.css" />
+        <title>KoryenAC v0.001</title>
+    </head>
+    <body>
+        <h1>KoryenAlbCraft v0.001</h1>
+
+        <form>
+            <label for="server-select">Server:</label>
+            <select id="server-select">
+                <option value="east">Asia (East)</option>
+                <option value="west">US (West)</option>
+                <option value="europe">Europe</option>
+            </select>
+
+            <br /><br />
+
+            <label for="item-ids-input">Item IDs:</label>
+            <input
+                type="text"
+                id="item-ids-input"
+                placeholder="e.g., T4_FIBER,T5_HIDE" />
+
+            <br /><br />
+
+            <button type="button" id="search-button">Get Prices</button>
+        </form>
+
+        <div id="results-container"></div>
+
+        <script src="script.js" defer></script>
+    </body>
+</html>
