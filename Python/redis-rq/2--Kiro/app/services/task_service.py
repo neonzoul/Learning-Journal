@@ -5,17 +5,24 @@ This module provides the TaskService class that orchestrates job creation,
 file handling, and enqueueing operations for receipt processing workflows.
 """
 
-import logging
 from typing import Optional
 from uuid import UUID, uuid4
 
 from fastapi import UploadFile
 
+from app.core.logging_config import get_logger, get_performance_logger
+from app.core.exceptions import (
+    JobError,
+    QueueError,
+    DatabaseError,
+    FileValidationError
+)
 from app.domain.protocols import QueueServiceProtocol, LoggingServiceProtocol
 from app.domain.schemas import JobCreationResponse
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+perf_logger = get_performance_logger(__name__)
 
 
 class TaskService:
@@ -64,15 +71,26 @@ class TaskService:
             JobCreationResponse with job_id and status
             
         Raises:
-            ValueError: If file validation fails
-            Exception: If job creation or enqueueing fails
+            FileValidationError: If file validation fails
+            DatabaseError: If job log creation fails
+            QueueError: If job enqueueing fails
+            JobError: If overall job creation fails
         """
         # Generate job ID if not provided
         if job_id is None:
             job_id = uuid4()
         
+        # Start performance monitoring
+        perf_logger.start_operation(
+            "create_and_enqueue_job",
+            job_id=str(job_id),
+            filename=file.filename,
+            content_type=file.content_type,
+            notion_database_id=notion_database_id
+        )
+        
         logger.info(
-            f"Creating job {job_id} for file {file.filename}",
+            "Creating and enqueueing job",
             extra={
                 "job_id": str(job_id),
                 "filename": file.filename,
@@ -83,36 +101,91 @@ class TaskService:
         
         try:
             # Read file contents for processing
-            file_contents = await self._read_file_contents(file)
+            try:
+                file_contents = await self._read_file_contents(file)
+            except Exception as e:
+                raise FileValidationError(
+                    message=f"Failed to read file contents: {str(e)}",
+                    filename=file.filename,
+                    details={"error_type": "file_read_error"}
+                )
             
             # Create initial job log entry
-            self.logging_service.create_job_log(
-                job_id=job_id,
-                filename=file.filename
-            )
-            
-            logger.info(
-                f"Created job log entry for job {job_id}",
-                extra={"job_id": str(job_id)}
-            )
+            try:
+                self.logging_service.create_job_log(
+                    job_id=job_id,
+                    filename=file.filename,
+                    notion_database_id=notion_database_id
+                )
+                
+                logger.info(
+                    "Created job log entry",
+                    extra={"job_id": str(job_id)}
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to create job log entry",
+                    extra={
+                        "job_id": str(job_id),
+                        "error": str(e)
+                    },
+                    exc_info=True
+                )
+                raise DatabaseError(
+                    message=f"Failed to create job log entry: {str(e)}",
+                    operation="create_job_log",
+                    table="job_log",
+                    details={
+                        "job_id": str(job_id),
+                        "filename": file.filename
+                    }
+                )
             
             # Enqueue job for background processing
-            self.queue_service.enqueue_job(
-                function_name="trigger_n8n_workflow",
-                job_id=job_id,
-                image_data=file_contents,
-                filename=file.filename,
-                notion_database_id=notion_database_id,
-                content_type=file.content_type
-            )
+            try:
+                self.queue_service.enqueue_job(
+                    function_name="trigger_n8n_workflow",
+                    job_id=job_id,
+                    image_data=file_contents,
+                    filename=file.filename,
+                    notion_database_id=notion_database_id,
+                    content_type=file.content_type
+                )
+                
+                logger.info(
+                    "Successfully enqueued job for processing",
+                    extra={
+                        "job_id": str(job_id),
+                        "filename": file.filename,
+                        "notion_database_id": notion_database_id,
+                        "file_size": len(file_contents)
+                    }
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to enqueue job",
+                    extra={
+                        "job_id": str(job_id),
+                        "error": str(e)
+                    },
+                    exc_info=True
+                )
+                raise QueueError(
+                    message=f"Failed to enqueue job for processing: {str(e)}",
+                    operation="enqueue_job",
+                    details={
+                        "job_id": str(job_id),
+                        "filename": file.filename,
+                        "function_name": "trigger_n8n_workflow"
+                    }
+                )
             
-            logger.info(
-                f"Successfully enqueued job {job_id} for processing",
-                extra={
-                    "job_id": str(job_id),
-                    "filename": file.filename,
-                    "notion_database_id": notion_database_id
-                }
+            # End performance monitoring
+            perf_logger.end_operation(
+                success=True,
+                job_id=str(job_id),
+                filename=file.filename,
+                file_size=len(file_contents)
             )
             
             return JobCreationResponse(
@@ -120,9 +193,23 @@ class TaskService:
                 status="queued"
             )
             
+        except (FileValidationError, DatabaseError, QueueError):
+            # Re-raise application errors as-is
+            perf_logger.end_operation(
+                success=False,
+                error_message="Application error during job creation"
+            )
+            raise
+            
         except Exception as e:
+            # Handle unexpected errors
+            perf_logger.end_operation(
+                success=False,
+                error_message=f"Unexpected error: {str(e)}"
+            )
+            
             logger.error(
-                f"Failed to create and enqueue job {job_id}: {str(e)}",
+                "Unexpected error during job creation",
                 extra={
                     "job_id": str(job_id),
                     "filename": file.filename,
@@ -130,7 +217,16 @@ class TaskService:
                 },
                 exc_info=True
             )
-            raise
+            
+            raise JobError(
+                message=f"Failed to create and enqueue job: {str(e)}",
+                job_id=job_id,
+                details={
+                    "filename": file.filename,
+                    "notion_database_id": notion_database_id,
+                    "error_type": e.__class__.__name__
+                }
+            )
     
     async def _read_file_contents(self, file: UploadFile) -> bytes:
         """
@@ -143,7 +239,7 @@ class TaskService:
             File contents as bytes
             
         Raises:
-            ValueError: If file cannot be read or is empty
+            FileValidationError: If file cannot be read or is empty
         """
         try:
             # Reset file pointer to beginning
@@ -153,10 +249,15 @@ class TaskService:
             contents = await file.read()
             
             if not contents:
-                raise ValueError(f"File {file.filename} is empty")
+                raise FileValidationError(
+                    message="File is empty",
+                    filename=file.filename,
+                    file_size=0,
+                    details={"error_type": "empty_file"}
+                )
             
             logger.debug(
-                f"Successfully read {len(contents)} bytes from {file.filename}",
+                "Successfully read file contents",
                 extra={
                     "filename": file.filename,
                     "file_size": len(contents),
@@ -166,13 +267,39 @@ class TaskService:
             
             return contents
             
+        except FileValidationError:
+            # Re-raise file validation errors as-is
+            raise
+            
         except Exception as e:
-            error_msg = f"Failed to read file {file.filename}: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            raise ValueError(error_msg) from e
+            logger.error(
+                "Failed to read file contents",
+                extra={
+                    "filename": file.filename,
+                    "error": str(e)
+                },
+                exc_info=True
+            )
+            raise FileValidationError(
+                message=f"Failed to read file contents: {str(e)}",
+                filename=file.filename,
+                details={
+                    "error_type": "file_read_error",
+                    "original_error": str(e)
+                }
+            )
         finally:
             # Reset file pointer for potential future reads
-            await file.seek(0)
+            try:
+                await file.seek(0)
+            except Exception as e:
+                logger.warning(
+                    "Failed to reset file pointer",
+                    extra={
+                        "filename": file.filename,
+                        "error": str(e)
+                    }
+                )
     
     def get_job_status(self, job_id: UUID) -> Optional[dict]:
         """
@@ -183,12 +310,28 @@ class TaskService:
             
         Returns:
             Dictionary with job status information or None if not found
+            
+        Raises:
+            DatabaseError: If database query fails
         """
         try:
             job_log = self.logging_service.get_job_log(job_id)
             
             if not job_log:
+                logger.info(
+                    "Job not found",
+                    extra={"job_id": str(job_id)}
+                )
                 return None
+            
+            logger.debug(
+                "Retrieved job status",
+                extra={
+                    "job_id": str(job_id),
+                    "status": job_log.status,
+                    "filename": job_log.filename
+                }
+            )
             
             return {
                 "job_id": job_log.job_id,
@@ -202,8 +345,18 @@ class TaskService:
             
         except Exception as e:
             logger.error(
-                f"Failed to get job status for {job_id}: {str(e)}",
-                extra={"job_id": str(job_id)},
+                "Failed to get job status",
+                extra={
+                    "job_id": str(job_id),
+                    "error": str(e)
+                },
                 exc_info=True
             )
-            raise
+            raise DatabaseError(
+                message=f"Failed to retrieve job status: {str(e)}",
+                operation="get_job_log",
+                table="job_log",
+                details={
+                    "job_id": str(job_id)
+                }
+            )

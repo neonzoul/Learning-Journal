@@ -10,7 +10,12 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlmodel import select
 
+from app.core.logging_config import get_logger
+from app.core.exceptions import DatabaseError
 from app.infrastructure.database import JobLog
+
+
+logger = get_logger(__name__)
 
 
 class LoggingService:
@@ -41,13 +46,28 @@ class LoggingService:
             Created JobLog instance
             
         Raises:
-            Exception: If job_id already exists or database operation fails
+            DatabaseError: If job_id already exists or database operation fails
         """
         try:
             # Check if job already exists
             existing_job = self.db_session.get(JobLog, job_id)
             if existing_job:
-                raise ValueError(f"Job with ID {job_id} already exists")
+                logger.warning(
+                    "Attempted to create duplicate job log",
+                    extra={
+                        "job_id": str(job_id),
+                        "existing_status": existing_job.status
+                    }
+                )
+                raise DatabaseError(
+                    message=f"Job with ID {job_id} already exists",
+                    operation="create_job_log",
+                    table="job_log",
+                    details={
+                        "job_id": str(job_id),
+                        "existing_status": existing_job.status
+                    }
+                )
             
             # Create new job log
             job_log = JobLog(
@@ -62,11 +82,44 @@ class LoggingService:
             self.db_session.commit()
             self.db_session.refresh(job_log)
             
+            logger.info(
+                "Created job log entry",
+                extra={
+                    "job_id": str(job_id),
+                    "filename": filename,
+                    "notion_database_id": notion_database_id,
+                    "status": job_log.status
+                }
+            )
+            
             return job_log
+            
+        except DatabaseError:
+            # Re-raise database errors as-is
+            self.db_session.rollback()
+            raise
             
         except Exception as e:
             self.db_session.rollback()
-            raise e
+            logger.error(
+                "Failed to create job log entry",
+                extra={
+                    "job_id": str(job_id),
+                    "filename": filename,
+                    "error": str(e)
+                },
+                exc_info=True
+            )
+            raise DatabaseError(
+                message=f"Failed to create job log entry: {str(e)}",
+                operation="create_job_log",
+                table="job_log",
+                details={
+                    "job_id": str(job_id),
+                    "filename": filename,
+                    "error_type": e.__class__.__name__
+                }
+            )
     
     def update_job_status(
         self,
@@ -88,15 +141,35 @@ class LoggingService:
             Updated JobLog instance or None if job not found
             
         Raises:
-            Exception: If database operation fails
+            DatabaseError: If database operation fails
         """
         try:
             # Find existing job
             job_log = self.db_session.get(JobLog, job_id)
             if not job_log:
+                logger.warning(
+                    "Job not found for status update",
+                    extra={
+                        "job_id": str(job_id),
+                        "target_status": status
+                    }
+                )
                 return None
             
+            # Log the status transition
+            logger.info(
+                "Updating job status",
+                extra={
+                    "job_id": str(job_id),
+                    "old_status": job_log.status,
+                    "new_status": status,
+                    "has_message": bool(result_message),
+                    "has_notion_url": bool(notion_page_url)
+                }
+            )
+            
             # Update job status and completion details
+            old_status = job_log.status
             job_log.status = status
             job_log.completed_at = datetime.utcnow()
             
@@ -109,11 +182,39 @@ class LoggingService:
             self.db_session.commit()
             self.db_session.refresh(job_log)
             
+            logger.info(
+                "Job status updated successfully",
+                extra={
+                    "job_id": str(job_id),
+                    "old_status": old_status,
+                    "new_status": status,
+                    "completed_at": job_log.completed_at.isoformat()
+                }
+            )
+            
             return job_log
             
         except Exception as e:
             self.db_session.rollback()
-            raise e
+            logger.error(
+                "Failed to update job status",
+                extra={
+                    "job_id": str(job_id),
+                    "target_status": status,
+                    "error": str(e)
+                },
+                exc_info=True
+            )
+            raise DatabaseError(
+                message=f"Failed to update job status: {str(e)}",
+                operation="update_job_status",
+                table="job_log",
+                details={
+                    "job_id": str(job_id),
+                    "target_status": status,
+                    "error_type": e.__class__.__name__
+                }
+            )
     
     def get_job_log(self, job_id: UUID) -> Optional[JobLog]:
         """

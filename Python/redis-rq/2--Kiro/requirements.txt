@@ -24,6 +24,7 @@ python-magic==0.4.27
 
 # Logging and monitoring
 structlog==23.2.0
+python-json-logger==2.0.7
 
 # Development and testing dependencies
 pytest==7.4.3

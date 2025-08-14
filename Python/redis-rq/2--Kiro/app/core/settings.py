@@ -65,6 +65,30 @@ class Settings(BaseSettings):
         description="Whether to verify SSL certificates for HTTPS requests"
     )
     
+    # Logging Configuration
+    LOG_LEVEL: str = Field(
+        default="INFO",
+        description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
+    )
+    ENABLE_JSON_LOGGING: bool = Field(
+        default=True,
+        description="Whether to use structured JSON logging"
+    )
+    LOG_FILE: Optional[str] = Field(
+        default=None,
+        description="Optional log file path"
+    )
+    
+    # Request Logging Configuration
+    LOG_REQUESTS: bool = Field(
+        default=True,
+        description="Whether to log incoming requests"
+    )
+    LOG_RESPONSES: bool = Field(
+        default=True,
+        description="Whether to log outgoing responses"
+    )
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

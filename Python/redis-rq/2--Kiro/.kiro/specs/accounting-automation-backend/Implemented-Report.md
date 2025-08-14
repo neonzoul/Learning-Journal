@@ -464,148 +464,745 @@ Ready for Task 6: Create task service for business logic orchestration
 
 **Next Steps:**
 Ready for Task 7: Implement receipt upload API endpoint
-### Tas
-k 7: Implement receipt upload API endpoint ✅
+
+## Task 7 Verification Summary ✅
+
+**Task 7: Implement receipt upload API endpoint** has been **COMPLETED** successfully.
+
+**Implementation Status:** ✅ All requirements satisfied and fully functional
+
+**Key Components Verified:**
+- ✅ Receipts router created with `/receipts` prefix
+- ✅ Upload endpoint implemented at `POST /receipts/upload`
+- ✅ Comprehensive file validation (type, size, magic bytes)
+- ✅ Proper error responses for all validation failures
+- ✅ Multipart form data handling for file and notion_database_id
+
+**Validation Features Implemented:**
+- Magic bytes detection for JPEG and PNG formats
+- File size validation with 10MB configurable limit
+- Notion database ID format validation (32-character hex)
+- Content-Type header validation with normalization
+- File extension fallback validation
+
+**Error Handling Implemented:**
+- HTTP 400 for invalid image formats with detailed error messages
+- HTTP 413 for files exceeding size limit
+- HTTP 422 for validation errors
+- HTTP 500 for internal server errors
+- Structured error responses with context information
+
+**Integration Verified:**
+- TaskService integration through dependency injection
+- Structured logging with request context
+- FastAPI UploadFile and Form parameter handling
+- Health check endpoint for service monitoring
+
+**Requirements Satisfied:**
+- ✅ 1.1: POST endpoint with multipart/form-data handling
+- ✅ 1.3: Image format and size validation
+- ✅ 1.4: Appropriate error responses for validation failures
+- ✅ 1.5: File size limit enforcement
+- ✅ 5.3: Security considerations implemented
+
+**Testing Status:** All validation functions and endpoint functionality verified successfully.
+
+**Next Task Ready:** Task 8 - Implement job callback API endpoint
+### Task 8: Implement job callback API endpoint ✅
 
 **Implementation Date:** 2025-01-14
 
 **Components Implemented:**
-- Complete receipts router with comprehensive upload endpoint
-- Advanced file validation including type, size, and magic bytes verification
-- Robust error responses for all validation failure scenarios
-- Multipart form data handling for file and notion_database_id parameters
+- Complete jobs router with callback endpoint for N8N workflow status updates
+- Authentication system using secret token in request headers
+- Job status update logic integrated with logging service
+- Comprehensive error handling for authentication and missing jobs
 
 **Key Files Created:**
-- `app/api/v1/receipts.py` - Receipt upload API endpoint:
-  - `upload_receipt()` endpoint with comprehensive validation
-  - `validate_image_format()` function using magic bytes detection
-  - `validate_file_size()` function with configurable limits
-  - `validate_notion_database_id()` function with format validation
-  - `health_check()` endpoint for service monitoring
-- `app/api/v1/api.py` - API v1 router configuration:
-  - Main API router setup with receipts router inclusion
-  - Clean router organization for scalability
+- `app/api/v1/jobs.py` - Jobs API router with callback endpoint:
+  - `router` - APIRouter configured with `/jobs` prefix and tags
+  - `verify_callback_token()` - Authentication dependency function
+  - `job_callback()` - POST endpoint for job status callbacks
+  - Comprehensive error handling and structured responses
 
 **Updated Files:**
-- `main.py` - FastAPI application integration:
-  - Added API v1 router with proper prefix configuration
-  - Integrated receipts endpoint into main application
+- `app/api/v1/api.py` - Added jobs router to main API router:
+  - Import statement for jobs router
+  - Router inclusion in main api_router
 
-**Upload Endpoint Features:**
-- **Comprehensive File Validation:**
-  - Magic bytes detection for JPEG (`\xff\xd8\xff`) and PNG (`\x89\x50\x4e\x47...`) formats
-  - Content-Type header validation with normalization (jpg/jpeg handling)
-  - File extension fallback validation for additional verification
-  - File size validation against configurable maximum (10MB default)
-  - Empty file detection with meaningful error messages
+**Jobs Router Features:**
+- **Callback Endpoint:**
+  - `POST /api/v1/jobs/{job_id}/callback` endpoint
+  - UUID path parameter for job identification
+  - JobCallbackPayload request body validation
+  - JSONResponse with structured success confirmation
 
-- **Notion Database ID Validation:**
-  - 32-character hexadecimal format validation
-  - Empty/whitespace validation with clear error messages
-  - Hyphen removal for flexible input format support
-  - Case-insensitive hexadecimal character validation
+- **Authentication System:**
+  - `verify_callback_token()` dependency function
+  - `X-Callback-Token` header validation
+  - Comparison with `settings.CALLBACK_SECRET_TOKEN`
+  - HTTP 401 Unauthorized for missing or invalid tokens
 
-- **Request Handling:**
-  - Multipart form data support for file and notion_database_id
-  - Async file processing with proper file pointer management
-  - FastAPI UploadFile integration with type annotations
-  - Form field validation with descriptive parameter documentation
+- **Job Status Updates:**
+  - Integration with LoggingService through dependency injection
+  - `update_job_status()` call with payload data
+  - Support for status, message, and notion_page_url updates
+  - Database transaction handling through service layer
 
-- **Error Response Structure:**
-  - Structured error responses with error type, message, and context
-  - HTTP status code mapping (400, 413, 422, 500)
-  - Detailed validation failure information
-  - Allowed formats and limits included in error responses
+- **Error Handling:**
+  - HTTP 401 for missing or invalid authentication tokens
+  - HTTP 404 for jobs not found in database
+  - HTTP 500 for unexpected database or system errors
+  - Proper exception re-raising for HTTP exceptions
+  - Structured error responses with meaningful messages
+
+**Authentication Implementation:**
+- Header-based authentication using `X-Callback-Token`
+- Token validation against configured secret from environment
+- FastAPI dependency injection for reusable authentication
+- Clear error messages for authentication failures
+
+**Request/Response Models:**
+- Uses existing `JobCallbackPayload` schema for request validation
+- Structured JSON response with job_id, status, and success message
+- Proper UUID handling and serialization
+- HTTP status code compliance (200, 401, 404, 500)
+
+**Integration Points:**
+- LoggingService integration for database operations
+- Settings integration for authentication token validation
+- FastAPI dependency injection system
+- Existing domain schemas for request/response validation
+
+**Requirements Satisfied:**
+- 3.1: N8N workflow can POST to callback endpoint with job completion status ✅
+- 3.2: Callback reports success/failure status with optional message and Notion URL ✅
+- 3.3: Authentication using secret token in X-Callback-Token header ✅
+- 3.4: Job status updated in logging database with completion details ✅
+- 3.5: Returns HTTP 401 Unauthorized for invalid callback tokens ✅
 
 **API Endpoint Specification:**
 ```
-POST /api/v1/receipts/upload
-Content-Type: multipart/form-data
+POST /api/v1/jobs/{job_id}/callback
+Headers: X-Callback-Token: <secret_token>
+Body: {
+  "status": "success|failure",
+  "message": "optional message",
+  "notion_page_url": "optional URL"
+}
 
-Parameters:
-- file: UploadFile (JPEG or PNG, max 10MB)
-- notion_database_id: str (32-character hex string)
+Responses:
+- 200: Job status updated successfully
+- 401: Missing or invalid callback token
+- 404: Job not found
+- 500: Internal server error
+```
 
-Response: 202 Accepted
+**Error Response Examples:**
+- Missing token: `{"detail": "Missing X-Callback-Token header"}`
+- Invalid token: `{"detail": "Invalid callback token"}`
+- Job not found: `{"detail": "Job with ID {job_id} not found"}`
+- System error: `{"detail": "Failed to update job status: {error}"}`
+
+**Security Features:**
+- Token-based authentication for callback endpoint protection
+- No sensitive data exposure in error messages
+- Proper HTTP status code usage for security clarity
+- Input validation through Pydantic schemas
+
+**Testing Verification:**
+- Application imports successfully with new router
+- Router properly integrated into main API structure
+- Authentication dependency function works correctly
+- Error handling paths validated for different scenarios
+
+**Next Steps:**
+Ready for Task 9: Create FastAPI application with monitoring
+
+### Task 9: Create FastAPI application with monitoring ✅
+
+**Implementation Date:** 2025-01-14
+
+**Components Implemented:**
+- Enhanced FastAPI application with comprehensive monitoring capabilities
+- Router registration and startup event handlers with proper initialization
+- RQ Dashboard integration for queue monitoring (with graceful fallback)
+- Enhanced health check endpoint with multi-component status checking
+
+**Key Files Updated:**
+- `main.py` - Complete FastAPI application with monitoring:
+  - Enhanced lifespan manager with database and Redis initialization
+  - RQ Dashboard integration with graceful fallback for missing dependencies
+  - Comprehensive health check endpoint with database and Redis status
+  - Queue monitoring endpoint for detailed queue statistics
+  - CORS middleware configuration for development
+  - Structured logging configuration
+  - Uvicorn server configuration
+
+**FastAPI Application Features:**
+- **Application Initialization:**
+  - FastAPI app with proper title, version, and OpenAPI configuration
+  - Lifespan manager for startup and shutdown event handling
+  - Database initialization with error handling and logging
+  - Redis connection testing during startup
+  - Comprehensive startup logging with success/failure reporting
+
+- **Router Integration:**
+  - API v1 router mounted at configurable prefix (`/api/v1`)
+  - All existing routers (receipts, jobs) properly integrated
+  - OpenAPI documentation available at `/api/v1/openapi.json`
+
+- **RQ Dashboard Integration:**
+  - Optional RQ Dashboard mounting at `/rq` endpoint
+  - Graceful handling of missing rq-dashboard dependency
+  - Redis connection configuration for dashboard
+  - Fallback to API-only queue monitoring when dashboard unavailable
+
+- **Monitoring Endpoints:**
+  - Enhanced `/health` endpoint with multi-component health checks
+  - `/monitoring/queue` endpoint for detailed queue statistics
+  - Database connectivity verification
+  - Redis queue status and metrics
+  - Comprehensive health status reporting
+
+**Health Check Features:**
+- **Multi-Component Health Monitoring:**
+  - Database connectivity check with connection status
+  - Redis queue connectivity and statistics
+  - Overall system health status (healthy/degraded/unhealthy)
+  - Individual component status reporting
+  - Structured health response with detailed information
+
+- **Health Status Levels:**
+  - `healthy` - All components operational
+  - `degraded` - Non-critical components failing (Redis queue issues)
+  - `unhealthy` - Critical components failing (database issues)
+
+**Queue Monitoring Features:**
+- **Detailed Queue Statistics:**
+  - Queue length and job counts by status
+  - Failed job registry count
+  - Scheduled job registry count
+  - Started job registry count
+  - Deferred job registry count
+  - Dashboard URL reference
+  - Timestamp for monitoring data
+
+- **RQ Dashboard Integration:**
+  - Web-based queue monitoring interface at `/rq`
+  - Redis connection configuration for dashboard
+  - Queue visualization and job management
+  - Worker status and job history
+  - Graceful fallback when dashboard dependencies unavailable
+
+**Startup Event Handlers:**
+- **Database Initialization:**
+  - Automatic table creation on startup
+  - Connection validation with error handling
+  - Structured logging for initialization status
+  - Application startup failure on database issues
+
+- **Redis Connection Testing:**
+  - Queue service connection validation
+  - Queue statistics retrieval for health verification
+  - Connection cleanup after testing
+  - Startup failure on Redis connection issues
+
+**Middleware Configuration:**
+- **CORS Middleware:**
+  - Configured for development with permissive settings
+  - Ready for production configuration with specific origins
+  - Supports credentials and all HTTP methods
+  - Proper header handling for API access
+
+**Logging Configuration:**
+- **Structured Logging:**
+  - Consistent log format with timestamps and levels
+  - Component-specific loggers for different modules
+  - Error logging with context information
+  - Startup and shutdown event logging
+
+**Error Handling:**
+- **Graceful Degradation:**
+  - RQ Dashboard optional with fallback messaging
+  - Health check continues with component failures
+  - Meaningful error messages for troubleshooting
+  - Proper HTTP status codes for monitoring endpoints
+
+**Server Configuration:**
+- **Uvicorn Integration:**
+  - Development server configuration with hot reload
+  - Configurable host and port settings
+  - Proper logging level configuration
+  - Production-ready server setup
+
+**Requirements Satisfied:**
+- 7.1: FastAPI application exposes RQ Dashboard at `/rq` endpoint ✅
+- 7.2: Structured logging for job status and timing information ✅
+- 4.4: Application startup with database table creation ✅
+
+**API Endpoints Added:**
+```
+GET /health - Comprehensive health check with component status
+GET /monitoring/queue - Detailed queue statistics and metrics
+GET /rq - RQ Dashboard web interface (when available)
+```
+
+**Health Check Response Example:**
+```json
 {
-  "job_id": "uuid",
-  "status": "queued"
+  "status": "healthy",
+  "service": "Accounting Automation Backend",
+  "version": "1.0.0",
+  "checks": {
+    "database": {
+      "status": "healthy",
+      "message": "Connected"
+    },
+    "redis_queue": {
+      "status": "healthy",
+      "message": "Connected",
+      "queue_info": {
+        "name": "default",
+        "length": 0,
+        "failed_job_count": 0,
+        "scheduled_job_count": 0,
+        "started_job_count": 0,
+        "deferred_job_count": 0
+      }
+    }
+  }
 }
 ```
 
-**Validation Functions:**
-- `validate_image_format(file_content, content_type, filename)`:
-  - Magic bytes detection for reliable format verification
-  - Content-Type header validation with normalization
-  - File extension fallback for additional verification
-  - Comprehensive error messages with detected format information
+**Queue Monitoring Response Example:**
+```json
+{
+  "queue_status": {
+    "name": "default",
+    "length": 2,
+    "failed_job_count": 0,
+    "scheduled_job_count": 0,
+    "started_job_count": 1,
+    "deferred_job_count": 0
+  },
+  "dashboard_url": "/rq",
+  "timestamp": "2025-01-14T15:52:00.000Z"
+}
+```
 
-- `validate_file_size(file_size)`:
-  - Configurable size limit validation (10MB default)
-  - Clear error messages with size information in bytes and MB
-  - HTTP 413 status code for payload too large scenarios
+**Integration Verification:**
+- Application imports successfully with all dependencies
+- Router registration working correctly
+- Health check endpoints functional
+- Queue monitoring operational
+- Startup event handlers executing properly
+- Logging configuration active
 
-- `validate_notion_database_id(notion_database_id)`:
-  - 32-character hexadecimal format validation
-  - Empty/whitespace detection with clear error messages
-  - Flexible input handling with hyphen removal
-  - Case-insensitive validation for user convenience
-
-**Error Handling:**
-- **HTTP 400 Bad Request:**
-  - Invalid image format with supported format list
-  - Invalid Notion database ID format
-  - Missing file or empty file scenarios
-  - Validation errors from task service
-
-- **HTTP 413 Payload Too Large:**
-  - File size exceeds maximum limit
-  - Clear size information in error response
-
-- **HTTP 422 Unprocessable Entity:**
-  - Pydantic validation errors for request parameters
-
-- **HTTP 500 Internal Server Error:**
-  - Unexpected errors during processing
-  - Generic error message to avoid information leakage
-
-**Integration Features:**
-- TaskService integration through dependency injection
-- Structured logging with request context (filename, file size, etc.)
-- Job creation workflow integration with proper error propagation
-- Health check endpoint for service monitoring
-
-**Security Considerations:**
-- Magic bytes validation prevents file type spoofing
-- File size limits prevent DoS attacks through large uploads
-- Input validation prevents injection attacks
-- Error messages avoid sensitive information leakage
-
-**Requirements Satisfied:**
-- 1.1: POST endpoint at `/api/v1/receipts/upload` with multipart/form-data ✅
-- 1.3: Image format and size validation with appropriate error responses ✅
-- 1.4: HTTP 400 for invalid images and HTTP 400 for validation failures ✅
-- 1.5: File size limit enforcement with HTTP 400 rejection ✅
-- 5.3: Callback endpoints protected (implemented in next task) ✅
-
-**API Documentation:**
-- Comprehensive OpenAPI documentation with parameter descriptions
-- Response model documentation with example responses
-- Error response documentation with status codes
-- Request/response examples for API consumers
-
-**Testing Verification:**
-- Valid JPEG and PNG image validation tested successfully
-- Invalid file format rejection verified
-- File size limit enforcement confirmed
-- Notion database ID validation tested with various formats
-- Error response structure and status codes validated
-
-**Performance Considerations:**
-- Async file processing for non-blocking operations
-- File content reading with proper memory management
-- Magic bytes detection for efficient format validation
-- Structured logging for monitoring and debugging
+**Deployment Readiness:**
+- Environment variable configuration
+- Database initialization on startup
+- Redis connection validation
+- Health check endpoints for load balancer integration
+- Monitoring endpoints for operational visibility
+- Graceful error handling and fallback mechanisms
 
 **Next Steps:**
-Ready for Task 8: Implement job callback API endpoint
+Ready for Task 10: Implement RQ worker for N8N integration
+
+### Task 10: Implement RQ worker for N8N integration ✅
+
+**Implementation Date:** 2025-01-14
+
+**Components Implemented:**
+- Complete RQ worker implementation with N8N webhook integration
+- HTTP client for N8N workflow triggering with comprehensive error handling
+- Base64 encoding for image data transmission with validation
+- Comprehensive error handling and structured logging throughout the worker process
+
+**Key Files Updated:**
+- `rq_worker.py` - Complete worker implementation with N8N integration:
+  - `trigger_n8n_workflow()` function for processing receipt analysis jobs
+  - `N8NWebhookError` and `ImageEncodingError` custom exception classes
+  - `setup_worker_logging()` function for enhanced worker logging configuration
+  - `create_worker_connection()` function for Redis connection management
+  - Main worker process with proper error handling and graceful shutdown
+
+**Updated Files:**
+- `app/infrastructure/queue.py` - Enhanced queue service for worker function integration:
+  - Dynamic worker function import to avoid circular dependencies
+  - Updated job enqueueing logic to properly reference worker functions
+  - Enhanced retry logic with proper function resolution
+
+**RQ Worker Features:**
+- **N8N Workflow Integration:**
+  - HTTP POST requests to N8N webhook endpoints with proper authentication
+  - Bearer token authentication using N8N API key from settings
+  - Comprehensive request/response handling with timeout configuration
+  - SSL verification support with configurable settings
+
+- **Image Data Handling:**
+  - Base64 encoding of image bytes for transmission to N8N
+  - Image size validation and encoding error handling
+  - Efficient memory management for large image files
+  - Proper error handling for encoding failures
+
+- **HTTP Client Configuration:**
+  - httpx client with comprehensive timeout settings (connect, read, write, pool)
+  - SSL verification with configurable settings for different environments
+  - Follow redirects support for webhook endpoint flexibility
+  - User-Agent header with application identification
+
+- **Error Handling:**
+  - Custom exception classes for different failure scenarios
+  - Comprehensive error logging with job context and stack traces
+  - HTTP status code validation with detailed error messages
+  - Timeout handling for long-running N8N workflows
+  - Network error handling with proper exception chaining
+
+**Worker Function Implementation:**
+- **Function Signature:**
+  ```python
+  trigger_n8n_workflow(
+      job_id: UUID,
+      image_data: bytes,
+      filename: str,
+      notion_database_id: str,
+      **kwargs: Any
+  ) -> Dict[str, Any]
+  ```
+
+- **Webhook Payload Structure:**
+  ```json
+  {
+    "job_id": "uuid-string",
+    "image_data": "base64-encoded-image",
+    "filename": "original-filename.jpg",
+    "notion_database_id": "database-id",
+    "callback_url": "/api/v1/jobs/{job_id}/callback"
+  }
+  ```
+
+- **Response Handling:**
+  - JSON response parsing with fallback for non-JSON responses
+  - HTTP status code validation (200, 201, 202 accepted)
+  - Structured response data with status and message information
+  - Error response logging with truncated content for log management
+
+**Logging and Monitoring:**
+- **Structured Logging:**
+  - Job-specific logging context with job_id, filename, and metadata
+  - Image processing metrics (size, encoding time)
+  - HTTP request/response logging with status codes and timing
+  - Error logging with full context and stack traces
+
+- **Log Configuration:**
+  - Multiple log handlers (console and file output)
+  - External library log level management (httpx, redis, rq)
+  - Worker-specific log formatting and structured output
+  - Log file rotation and management
+
+**Worker Process Management:**
+- **Redis Connection:**
+  - Robust Redis connection with health checks and retry logic
+  - Connection pooling and timeout configuration
+  - Graceful connection failure handling with clear error messages
+  - Worker identification with unique names
+
+- **Worker Configuration:**
+  - Default queue processing with scheduler support
+  - Configurable result TTL (1 hour) and worker TTL (30 minutes)
+  - Graceful shutdown handling for SIGINT/SIGTERM
+  - Process exit codes for different failure scenarios
+
+**Queue Service Integration:**
+- **Dynamic Function Import:**
+  - Circular import avoidance with dynamic function resolution
+  - Support for multiple worker functions with extensible design
+  - Proper function reference passing to RQ for job execution
+  - Enhanced retry logic with function resolution
+
+**Requirements Satisfied:**
+- 2.2: RQ worker triggers N8N workflow via HTTP webhook ✅
+- 2.3: Image data encoded as base64 with all necessary metadata ✅
+- 2.4: Job moved to failed queue when N8N workflow call fails ✅
+- 7.3: Comprehensive error handling and logging for job processing ✅
+
+**Error Scenarios Handled:**
+- Image encoding failures with detailed error messages
+- N8N webhook HTTP errors (timeout, connection, status codes)
+- Redis connection failures with automatic retry logic
+- Worker process crashes with graceful shutdown and logging
+- Invalid webhook responses with proper error propagation
+
+**Performance Features:**
+- Efficient base64 encoding for large image files
+- HTTP connection reuse with httpx client
+- Configurable timeouts for different network conditions
+- Memory-efficient image data handling
+- Structured logging for performance monitoring
+
+**Security Features:**
+- Bearer token authentication for N8N webhook calls
+- SSL certificate verification with configurable settings
+- No sensitive data logging (API keys, image content)
+- Secure error message handling without data exposure
+
+**Testing Verification:**
+- Worker function syntax and import validation successful
+- Queue service integration with dynamic function resolution verified
+- Error handling paths validated for different failure scenarios
+- Logging configuration and structured output confirmed
+
+**Integration Points:**
+- Seamless integration with existing RQService for job enqueueing
+- Compatible with TaskService job creation workflow
+- Ready for callback integration with jobs API endpoint
+- Prepared for monitoring and dashboard integration
+
+**Next Steps:**
+Ready for Task 11: Add comprehensive error handling and logging
+
+**Deployment Readiness:**
+- Worker can be deployed as separate process from main API
+- Horizontal scaling support with multiple worker instances
+- Production-ready error handling and logging
+- Monitoring integration for worker health and performance
+### Task 11: Add comprehensive error handling and logging ✅
+
+**Implementation Date:** 2025-08-14
+
+**Components Implemented:**
+- Comprehensive structured logging throughout all components with JSON formatting
+- Custom exception classes with appropriate HTTP status codes and detailed context
+- Error response models for consistent API error formatting
+- Global error handling middleware for automatic exception processing
+- Performance monitoring and metrics collection with request/response logging
+
+**Key Files Created:**
+- `app/core/exceptions.py` - Custom exception hierarchy:
+  - `BaseApplicationError` - Base class for all application errors
+  - `ValidationError` - Input validation failures
+  - `FileValidationError` - File-specific validation errors
+  - `AuthenticationError` - Authentication failures
+  - `AuthorizationError` - Authorization failures
+  - `ResourceNotFoundError` - Missing resource errors
+  - `JobError` - Job processing failures
+  - `QueueError` - Queue operation failures
+  - `DatabaseError` - Database operation failures
+  - `ExternalServiceError` - External API call failures
+  - `ConfigurationError` - Configuration issues
+  - `RateLimitError` - Rate limiting errors
+
+- `app/domain/error_schemas.py` - Standardized error response models:
+  - `ErrorResponse` - Base error response format
+  - `ValidationErrorResponse` - Validation error details
+  - `AuthenticationErrorResponse` - Authentication error format
+  - `ResourceNotFoundErrorResponse` - Not found error format
+  - `ServiceUnavailableErrorResponse` - Service unavailable format
+  - `InternalServerErrorResponse` - Internal server error format
+  - `JobStatusResponse` - Job status query response
+  - `HealthCheckResponse` - Health check response format
+
+- `app/core/logging_config.py` - Structured logging configuration:
+  - `ContextFilter` - Request context injection for logs
+  - `CustomJSONFormatter` - Enhanced JSON log formatting
+  - `PerformanceLogger` - Operation timing and metrics
+  - `setup_logging()` - Comprehensive logging setup
+  - `configure_library_loggers()` - Third-party library log configuration
+  - Request ID generation and context management
+
+- `app/core/middleware.py` - Error handling and logging middleware:
+  - `ErrorHandlingMiddleware` - Global exception handling
+  - `RequestLoggingMiddleware` - Request/response logging
+  - `MetricsMiddleware` - Application metrics collection
+
+**Updated Files:**
+- `app/core/settings.py` - Added logging configuration settings:
+  - `LOG_LEVEL` - Configurable logging level
+  - `ENABLE_JSON_LOGGING` - JSON vs plain text logging
+  - `LOG_FILE` - Optional file logging
+  - `LOG_REQUESTS` - Request logging toggle
+  - `LOG_RESPONSES` - Response logging toggle
+
+- `main.py` - Enhanced with middleware and structured logging:
+  - Structured logging setup on application start
+  - Error handling middleware integration
+  - Request logging middleware with performance monitoring
+  - Metrics collection middleware
+  - Enhanced health check with error response models
+
+- `app/api/v1/receipts.py` - Updated with new error handling:
+  - Custom exception usage instead of HTTPException
+  - Performance logging for upload operations
+  - Structured error responses with detailed context
+  - Enhanced validation with meaningful error messages
+
+- `app/api/v1/jobs.py` - Updated with comprehensive error handling:
+  - Custom authentication and database errors
+  - Performance monitoring for callback operations
+  - Job status endpoint with proper error handling
+  - Structured logging with job context
+
+- `app/services/task_service.py` - Enhanced error handling:
+  - Custom exceptions for different failure scenarios
+  - Performance logging for job creation operations
+  - Detailed error context and structured logging
+  - Proper error propagation with meaningful messages
+
+- `app/services/logging_service.py` - Database error handling:
+  - Custom database exceptions with operation context
+  - Transaction error handling with rollback
+  - Structured logging for database operations
+  - Status transition logging with old/new status tracking
+
+- `rq_worker.py` - Worker error handling and logging:
+  - Structured logging setup for worker processes
+  - Custom external service errors for N8N integration
+  - Performance monitoring for workflow triggers
+  - Enhanced error context for debugging
+
+- `requirements.txt` - Added logging dependency:
+  - `python-json-logger==2.0.7` for structured JSON logging
+
+**Structured Logging Features:**
+- **JSON Formatting:**
+  - Structured JSON logs with consistent field names
+  - Service metadata (name, version) in all log entries
+  - Request ID tracking across request lifecycle
+  - Thread and process ID for debugging
+  - Source file, line number, and function name
+
+- **Context Management:**
+  - Request ID generation and propagation
+  - Job ID context for background processing
+  - User ID context for authenticated requests
+  - Performance metrics (duration, memory usage)
+
+- **Performance Monitoring:**
+  - Operation timing with start/end logging
+  - Request/response size tracking
+  - Processing time measurement
+  - Error rate and success metrics
+
+**Error Handling Features:**
+- **Custom Exception Hierarchy:**
+  - Base application error with status codes and details
+  - Specific exception types for different error scenarios
+  - Structured error details with context information
+  - Proper HTTP status code mapping
+
+- **Global Middleware:**
+  - Automatic exception catching and formatting
+  - Consistent error response structure
+  - Request ID injection for error tracing
+  - Performance metrics collection
+
+- **Error Response Models:**
+  - Standardized error response format across all endpoints
+  - Detailed validation error information
+  - Context-specific error details
+  - Proper HTTP status code usage
+
+**API Error Responses:**
+- **Consistent Format:**
+  - `error` - Error category/type
+  - `message` - Human-readable error message
+  - `error_code` - Machine-readable error code
+  - `timestamp` - ISO timestamp of error occurrence
+  - `request_id` - Unique request identifier for tracing
+  - `details` - Additional error context and information
+
+- **Status Code Mapping:**
+  - 400 - Validation errors (FileValidationError, ValidationError)
+  - 401 - Authentication errors (AuthenticationError)
+  - 403 - Authorization errors (AuthorizationError)
+  - 404 - Resource not found (ResourceNotFoundError)
+  - 429 - Rate limiting (RateLimitError)
+  - 500 - Internal errors (JobError, DatabaseError)
+  - 502 - External service errors (ExternalServiceError)
+  - 503 - Service unavailable (QueueError)
+
+**Logging Configuration:**
+- **Environment Variables:**
+  - `LOG_LEVEL` - DEBUG, INFO, WARNING, ERROR, CRITICAL
+  - `ENABLE_JSON_LOGGING` - true/false for JSON vs plain text
+  - `LOG_FILE` - Optional file path for file logging
+  - `LOG_REQUESTS` - Enable/disable request logging
+  - `LOG_RESPONSES` - Enable/disable response logging
+
+- **Library Configuration:**
+  - Reduced noise from HTTP libraries (httpx, urllib3)
+  - Database query logging configuration
+  - Redis/RQ worker logging levels
+  - FastAPI/Uvicorn logging configuration
+
+**Performance Monitoring:**
+- **Request Metrics:**
+  - Request processing time measurement
+  - Request/response size tracking
+  - Error rate calculation
+  - Success/failure ratio monitoring
+
+- **Operation Timing:**
+  - Job creation and enqueueing timing
+  - File upload processing time
+  - Database operation duration
+  - External service call timing
+
+**Requirements Satisfied:**
+- 7.3: Structured logging throughout all components with job processing metrics ✅
+- 7.5: Jobs fail with error details preserved and logged with sufficient context ✅
+- 8.4: Comprehensive error logging with context for debugging and monitoring ✅
+
+**Error Handling Verification:**
+- Custom exceptions properly raised and handled
+- Middleware correctly catches and formats errors
+- Structured logging produces consistent JSON output
+- Performance monitoring tracks operation timing
+- Error responses follow standardized format
+
+**Integration Features:**
+- Seamless integration with existing FastAPI application
+- Backward compatibility with existing error handling
+- Enhanced debugging capabilities with structured logs
+- Improved monitoring and observability
+- Better error reporting for client applications
+
+**Testing Verification:**
+- Error handling functionality tested with sample exceptions
+- Structured logging produces proper JSON format
+- Custom exceptions include proper context and details
+- Middleware correctly processes different error types
+- Performance logging tracks operation timing
+
+**Next Steps:**
+Ready for Task 12: Create environment configuration and deployment setup
+
+## Task 11 Implementation Summary ✅
+
+**All Sub-tasks Completed:**
+
+✅ **Structured Logging Implementation** - Comprehensive JSON logging with context, performance metrics, and request tracing across all components.
+
+✅ **Custom Exception Classes** - Complete exception hierarchy with proper HTTP status codes, detailed context, and structured error information.
+
+✅ **Error Response Models** - Standardized Pydantic models for consistent API error formatting with proper documentation.
+
+✅ **Global Error Handling Middleware** - Automatic exception catching, formatting, and response generation with request context.
+
+✅ **Performance Monitoring** - Operation timing, request/response metrics, and comprehensive logging for system observability.
+
+**Key Components Created:**
+- `app/core/exceptions.py` - Complete custom exception hierarchy
+- `app/domain/error_schemas.py` - Standardized error response models  
+- `app/core/logging_config.py` - Structured logging configuration
+- `app/core/middleware.py` - Error handling and logging middleware
+- Enhanced all existing components with new error handling
+
+**Requirements Satisfied:**
+- ✅ 7.3: Structured logging with job processing metrics and system events
+- ✅ 7.5: Error details preserved with sufficient debugging context
+- ✅ 8.4: Comprehensive error handling and logging throughout the system
+
+**Integration Status:** All components successfully updated with enhanced error handling and structured logging. The system now provides comprehensive observability and debugging capabilities.

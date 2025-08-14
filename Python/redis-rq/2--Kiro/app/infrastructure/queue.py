@@ -108,9 +108,17 @@ class RQService:
             raise QueueConnectionError("Queue not initialized")
         
         try:
+            # Import the worker function dynamically to avoid circular imports
+            if function_name == "trigger_n8n_workflow":
+                from rq_worker import trigger_n8n_workflow
+                worker_function = trigger_n8n_workflow
+            else:
+                # For other functions, try to import from a workers module
+                worker_function = function_name
+            
             # Enqueue job with timeout configuration
             job = self._queue.enqueue(
-                function_name,
+                worker_function,
                 job_id,  # Pass job_id as first argument to the function
                 **kwargs,
                 job_timeout=settings.QUEUE_DEFAULT_TIMEOUT,
@@ -134,9 +142,18 @@ class RQService:
             # Try to reconnect once
             try:
                 self._initialize_connection()
+                
+                # Import the worker function dynamically to avoid circular imports
+                if function_name == "trigger_n8n_workflow":
+                    from rq_worker import trigger_n8n_workflow
+                    worker_function = trigger_n8n_workflow
+                else:
+                    # For other functions, try to import from a workers module
+                    worker_function = function_name
+                
                 # Retry enqueueing after reconnection
                 job = self._queue.enqueue(
-                    function_name,
+                    worker_function,
                     job_id,  # Pass job_id as first argument to the function
                     **kwargs,
                     job_timeout=settings.QUEUE_DEFAULT_TIMEOUT,

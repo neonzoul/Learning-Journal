@@ -5,19 +5,29 @@ This module provides endpoints for uploading receipt images and initiating
 their processing through the asynchronous workflow system.
 """
 
-import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
 from app.core.settings import settings
+from app.core.logging_config import get_logger, get_performance_logger
+from app.core.exceptions import (
+    FileValidationError,
+    ValidationError,
+    JobError
+)
 from app.core.dependencies import get_task_service
 from app.domain.schemas import JobCreationResponse
+from app.domain.error_schemas import (
+    ErrorResponse,
+    ValidationErrorResponse,
+    InternalServerErrorResponse
+)
 from app.services.task_service import TaskService
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+perf_logger = get_performance_logger(__name__)
 
 router = APIRouter(prefix="/receipts", tags=["receipts"])
 
@@ -46,7 +56,7 @@ def validate_image_format(file_content: bytes, content_type: str, filename: str)
         Validated MIME type
         
     Raises:
-        HTTPException: If format validation fails
+        FileValidationError: If format validation fails
     """
     # Check magic bytes first (most reliable)
     detected_type = None
@@ -75,13 +85,13 @@ def validate_image_format(file_content: bytes, content_type: str, filename: str)
     
     # If still no valid type detected, reject
     if not detected_type or detected_type not in ALLOWED_MIME_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "error": "Invalid image format",
-                "message": f"File format could not be validated as a supported image type. "
-                          f"Allowed formats: {', '.join(ALLOWED_MIME_TYPES)}. "
-                          f"Detected: {detected_type or 'unknown'}",
+        raise FileValidationError(
+            message=f"File format could not be validated as a supported image type. "
+                   f"Allowed formats: {', '.join(ALLOWED_MIME_TYPES)}. "
+                   f"Detected: {detected_type or 'unknown'}",
+            filename=filename,
+            content_type=content_type,
+            details={
                 "allowed_formats": list(ALLOWED_MIME_TYPES),
                 "detected_format": detected_type
             }
@@ -90,24 +100,26 @@ def validate_image_format(file_content: bytes, content_type: str, filename: str)
     return detected_type
 
 
-def validate_file_size(file_size: int) -> None:
+def validate_file_size(file_size: int, filename: str = None) -> None:
     """
     Validate file size against maximum limit.
     
     Args:
         file_size: Size of file in bytes
+        filename: Optional filename for error context
         
     Raises:
-        HTTPException: If file exceeds size limit
+        FileValidationError: If file exceeds size limit
     """
     if file_size > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail={
-                "error": "File too large",
-                "message": f"File size {file_size} bytes exceeds maximum allowed size of {MAX_FILE_SIZE} bytes",
+        raise FileValidationError(
+            message=f"File size {file_size} bytes exceeds maximum allowed size of {MAX_FILE_SIZE} bytes",
+            filename=filename,
+            file_size=file_size,
+            details={
                 "max_size_bytes": MAX_FILE_SIZE,
-                "max_size_mb": MAX_FILE_SIZE // (1024 * 1024)
+                "max_size_mb": MAX_FILE_SIZE // (1024 * 1024),
+                "actual_size_mb": file_size // (1024 * 1024)
             }
         )
 
@@ -123,25 +135,25 @@ def validate_notion_database_id(notion_database_id: str) -> str:
         Validated database ID
         
     Raises:
-        HTTPException: If database ID format is invalid
+        ValidationError: If database ID format is invalid
     """
     if not notion_database_id or not notion_database_id.strip():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "error": "Invalid notion_database_id",
-                "message": "notion_database_id cannot be empty"
-            }
+        raise ValidationError(
+            message="notion_database_id cannot be empty",
+            field="notion_database_id",
+            value=notion_database_id
         )
     
     # Basic format validation - Notion database IDs are typically 32 character hex strings
     cleaned_id = notion_database_id.strip().replace('-', '')
     if len(cleaned_id) != 32 or not all(c in '0123456789abcdefABCDEF' for c in cleaned_id):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "error": "Invalid notion_database_id format",
-                "message": "notion_database_id must be a valid 32-character hexadecimal string"
+        raise ValidationError(
+            message="notion_database_id must be a valid 32-character hexadecimal string",
+            field="notion_database_id",
+            value=notion_database_id,
+            details={
+                "expected_format": "32-character hexadecimal string",
+                "actual_length": len(cleaned_id)
             }
         )
     
@@ -154,7 +166,14 @@ def validate_notion_database_id(notion_database_id: str) -> str:
     status_code=status.HTTP_202_ACCEPTED,
     summary="Upload receipt image for processing",
     description="Upload a receipt image to be processed asynchronously. "
-                "Returns a job ID that can be used to track processing status."
+                "Returns a job ID that can be used to track processing status.",
+    responses={
+        202: {"model": JobCreationResponse},
+        400: {"model": ValidationErrorResponse},
+        413: {"model": ErrorResponse},
+        422: {"model": ValidationErrorResponse},
+        500: {"model": InternalServerErrorResponse}
+    }
 )
 async def upload_receipt(
     file: Annotated[UploadFile, File(
@@ -180,13 +199,20 @@ async def upload_receipt(
         JobCreationResponse with job_id and status "queued"
         
     Raises:
-        HTTPException 400: Invalid file format, size, or missing parameters
-        HTTPException 413: File size exceeds limit
-        HTTPException 422: Validation errors
-        HTTPException 500: Internal server error during processing
+        FileValidationError: Invalid file format, size, or missing parameters
+        ValidationError: Invalid notion_database_id format
+        JobError: Job creation or enqueueing failed
     """
+    # Start performance monitoring
+    perf_logger.start_operation(
+        "receipt_upload",
+        filename=file.filename,
+        content_type=file.content_type,
+        notion_database_id=notion_database_id
+    )
+    
     logger.info(
-        f"Received upload request for file: {file.filename}",
+        "Received upload request",
         extra={
             "filename": file.filename,
             "content_type": file.content_type,
@@ -200,12 +226,10 @@ async def upload_receipt(
         
         # Validate file presence and basic properties
         if not file.filename:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "No file provided",
-                    "message": "A file must be provided for upload"
-                }
+            raise FileValidationError(
+                message="A file must be provided for upload",
+                filename=None,
+                details={"error_type": "missing_file"}
             )
         
         # Read file content for validation
@@ -216,13 +240,17 @@ async def upload_receipt(
         await file.seek(0)
         
         # Validate file size
-        validate_file_size(file_size)
+        validate_file_size(file_size, file.filename)
         
         # Validate image format using magic bytes and content type
-        validated_content_type = validate_image_format(file_content, file.content_type, file.filename)
+        validated_content_type = validate_image_format(
+            file_content, 
+            file.content_type, 
+            file.filename
+        )
         
         logger.info(
-            f"File validation passed for {file.filename}",
+            "File validation passed",
             extra={
                 "filename": file.filename,
                 "file_size": file_size,
@@ -232,13 +260,39 @@ async def upload_receipt(
         )
         
         # Create and enqueue job
-        response = await task_service.create_and_enqueue_job(
-            file=file,
-            notion_database_id=validated_db_id
+        try:
+            response = await task_service.create_and_enqueue_job(
+                file=file,
+                notion_database_id=validated_db_id
+            )
+        except Exception as e:
+            logger.error(
+                "Job creation failed",
+                extra={
+                    "filename": file.filename,
+                    "notion_database_id": validated_db_id,
+                    "error": str(e)
+                },
+                exc_info=True
+            )
+            raise JobError(
+                message=f"Failed to create and enqueue job: {str(e)}",
+                details={
+                    "filename": file.filename,
+                    "notion_database_id": validated_db_id
+                }
+            )
+        
+        # End performance monitoring
+        perf_logger.end_operation(
+            success=True,
+            job_id=str(response.job_id),
+            filename=file.filename,
+            status=response.status
         )
         
         logger.info(
-            f"Successfully created job {response.job_id} for file {file.filename}",
+            "Successfully created job",
             extra={
                 "job_id": str(response.job_id),
                 "filename": file.filename,
@@ -248,31 +302,23 @@ async def upload_receipt(
         
         return response
         
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
+    except (FileValidationError, ValidationError, JobError):
+        # Re-raise application errors as-is (middleware will handle them)
+        perf_logger.end_operation(
+            success=False,
+            error_message="Validation or job creation failed"
+        )
         raise
-        
-    except ValueError as e:
-        # Handle validation errors from task service
-        logger.error(
-            f"Validation error during upload: {str(e)}",
-            extra={
-                "filename": file.filename,
-                "error": str(e)
-            }
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "error": "File validation failed",
-                "message": str(e)
-            }
-        )
         
     except Exception as e:
         # Handle unexpected errors
+        perf_logger.end_operation(
+            success=False,
+            error_message=f"Unexpected error: {str(e)}"
+        )
+        
         logger.error(
-            f"Unexpected error during upload: {str(e)}",
+            "Unexpected error during upload",
             extra={
                 "filename": file.filename,
                 "notion_database_id": notion_database_id,
@@ -280,11 +326,13 @@ async def upload_receipt(
             },
             exc_info=True
         )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "error": "Internal server error",
-                "message": "An unexpected error occurred while processing the upload"
+        
+        raise JobError(
+            message="An unexpected error occurred while processing the upload",
+            details={
+                "filename": file.filename,
+                "notion_database_id": notion_database_id,
+                "error_type": e.__class__.__name__
             }
         )
 
