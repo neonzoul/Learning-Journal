@@ -43,20 +43,31 @@ except ImportError:
 async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
-    Handles startup and shutdown events.
+    Handles startup and shutdown events with comprehensive validation.
     """
     logger.info("Starting up Accounting Automation Backend...")
     
+    # Validate configuration before starting services
+    try:
+        logger.info("Validating application configuration...")
+        settings.validate_startup_requirements()
+        logger.info("Configuration validation passed")
+    except ValueError as e:
+        logger.error(f"Configuration validation failed: {e}")
+        raise
+    
     # Startup: Initialize database
     try:
+        logger.info("Initializing database...")
         init_database()
         logger.info("Database initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
         raise
     
-    # Test Redis connection
+    # Test Redis connection with retry logic
     try:
+        logger.info("Testing Redis queue connection...")
         queue_service = create_queue_service()
         queue_info = queue_service.get_queue_info()
         logger.info(f"Redis queue connected successfully: {queue_info}")
@@ -65,12 +76,32 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to connect to Redis queue: {e}")
         raise
     
-    logger.info("Application startup completed successfully")
+    # Log startup configuration summary
+    logger.info(
+        "Application startup completed successfully",
+        extra={
+            "redis_url": settings.REDIS_URL,
+            "n8n_webhook_configured": bool(settings.N8N_WEBHOOK_URL),
+            "ssl_verification": settings.VERIFY_SSL,
+            "log_level": settings.LOG_LEVEL,
+            "debug_mode": settings.DEBUG
+        }
+    )
     
     yield
     
     # Shutdown: Cleanup if needed
     logger.info("Shutting down Accounting Automation Backend...")
+    
+    # Close any remaining connections
+    try:
+        queue_service = create_queue_service()
+        queue_service.close()
+        logger.info("Queue service connections closed")
+    except Exception as e:
+        logger.warning(f"Error closing queue connections: {e}")
+    
+    logger.info("Application shutdown completed")
 
 
 # Create FastAPI application instance

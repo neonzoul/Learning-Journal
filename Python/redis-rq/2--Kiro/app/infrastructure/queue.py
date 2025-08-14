@@ -6,11 +6,13 @@ using Redis as the backend for durable job queuing and worker coordination.
 """
 
 import logging
+import time
 from typing import Any
 from uuid import UUID
 
 import redis
 from rq import Queue
+from redis.exceptions import ConnectionError, TimeoutError, RedisError
 
 from app.core.settings import settings
 from app.domain.protocols import QueueServiceProtocol
@@ -51,41 +53,93 @@ class RQService:
         self._redis_connection = None
         self._queue = None
         
+        # Retry configuration
+        self.max_retries = 3
+        self.retry_delay = 1.0  # Initial delay in seconds
+        self.max_retry_delay = 30.0  # Maximum delay in seconds
+        
         # Initialize connection and queue
         self._initialize_connection()
     
     def _initialize_connection(self) -> None:
-        """Initialize Redis connection and RQ queue.
+        """Initialize Redis connection and RQ queue with retry logic.
         
         Raises:
-            QueueConnectionError: If unable to connect to Redis
+            QueueConnectionError: If unable to connect to Redis after all retries
         """
-        try:
-            # Create Redis connection with connection pooling
-            self._redis_connection = redis.from_url(
-                self.redis_url,
-                decode_responses=True,
-                socket_connect_timeout=5,
-                socket_timeout=5,
-                retry_on_timeout=True,
-                health_check_interval=30
-            )
-            
-            # Test connection
-            self._redis_connection.ping()
-            
-            # Initialize RQ queue
-            self._queue = Queue(
-                name=self.queue_name,
-                connection=self._redis_connection
-            )
-            
-            logger.info(f"Successfully connected to Redis at {self.redis_url}")
-            
-        except (redis.ConnectionError, redis.TimeoutError) as e:
-            error_msg = f"Failed to connect to Redis at {self.redis_url}: {str(e)}"
-            logger.error(error_msg)
-            raise QueueConnectionError(error_msg) from e
+        last_error = None
+        
+        for attempt in range(self.max_retries):
+            try:
+                # Create Redis connection with enhanced configuration
+                self._redis_connection = redis.from_url(
+                    self.redis_url,
+                    decode_responses=True,
+                    socket_connect_timeout=10,
+                    socket_timeout=10,
+                    retry_on_timeout=True,
+                    retry_on_error=[ConnectionError, TimeoutError],
+                    health_check_interval=30,
+                    max_connections=20,
+                    # SSL configuration
+                    ssl_cert_reqs=None if not settings.VERIFY_SSL else 'required'
+                )
+                
+                # Test connection with ping
+                self._redis_connection.ping()
+                
+                # Initialize RQ queue
+                self._queue = Queue(
+                    name=self.queue_name,
+                    connection=self._redis_connection
+                )
+                
+                logger.info(
+                    f"Successfully connected to Redis at {self.redis_url} "
+                    f"(attempt {attempt + 1}/{self.max_retries})"
+                )
+                return
+                
+            except (ConnectionError, TimeoutError, RedisError) as e:
+                last_error = e
+                if attempt < self.max_retries - 1:
+                    # Calculate exponential backoff delay
+                    delay = min(self.retry_delay * (2 ** attempt), self.max_retry_delay)
+                    logger.warning(
+                        f"Redis connection attempt {attempt + 1}/{self.max_retries} failed: {e}. "
+                        f"Retrying in {delay:.1f} seconds..."
+                    )
+                    time.sleep(delay)
+                else:
+                    logger.error(
+                        f"All Redis connection attempts failed. Last error: {e}"
+                    )
+        
+        # If we get here, all retries failed
+        error_msg = f"Failed to connect to Redis at {self.redis_url} after {self.max_retries} attempts: {last_error}"
+        logger.error(error_msg)
+        raise QueueConnectionError(error_msg) from last_error
+    
+    def _reconnect_with_retry(self) -> None:
+        """Attempt to reconnect to Redis with retry logic.
+        
+        Raises:
+            QueueConnectionError: If unable to reconnect after all retries
+        """
+        logger.info("Attempting to reconnect to Redis...")
+        
+        # Close existing connection if any
+        if self._redis_connection:
+            try:
+                self._redis_connection.close()
+            except Exception:
+                pass  # Ignore errors when closing
+            finally:
+                self._redis_connection = None
+                self._queue = None
+        
+        # Reinitialize connection
+        self._initialize_connection()
     
     def enqueue_job(
         self, 
@@ -135,13 +189,13 @@ class RQService:
                 }
             )
             
-        except (redis.ConnectionError, redis.TimeoutError) as e:
+        except (ConnectionError, TimeoutError, RedisError) as e:
             error_msg = f"Failed to enqueue job {job_id}: {str(e)}"
             logger.error(error_msg, extra={"job_id": str(job_id)})
             
-            # Try to reconnect once
+            # Try to reconnect and retry
             try:
-                self._initialize_connection()
+                self._reconnect_with_retry()
                 
                 # Import the worker function dynamically to avoid circular imports
                 if function_name == "trigger_n8n_workflow":

@@ -1206,3 +1206,211 @@ Ready for Task 12: Create environment configuration and deployment setup
 - ✅ 8.4: Comprehensive error handling and logging throughout the system
 
 **Integration Status:** All components successfully updated with enhanced error handling and structured logging. The system now provides comprehensive observability and debugging capabilities.
+### Task 12: Create environment configuration and deployment setup ✅
+
+**Implementation Date:** 2025-01-14
+
+**Components Implemented:**
+- Comprehensive .env.example file with all required environment variables and detailed documentation
+- Enhanced configuration validation and startup checks with comprehensive error handling
+- Proper Redis connection retry logic with exponential backoff and SSL support
+- SSL verification for HTTPS endpoints with configurable security settings
+
+**Key Files Created:**
+- `.env.example` - Complete environment configuration template:
+  - All required and optional environment variables documented
+  - Detailed descriptions and examples for each configuration option
+  - Security considerations and best practices
+  - Development and production configuration sections
+  - SSL and monitoring configuration options
+
+- `scripts/validate_config.py` - Configuration validation script:
+  - Standalone configuration validation for deployment pipelines
+  - Redis connection testing with retry logic
+  - Database initialization verification
+  - N8N webhook URL accessibility testing
+  - Comprehensive validation reporting with colored output
+
+- `scripts/deploy.sh` - Production deployment script:
+  - Automated deployment with configuration validation
+  - Docker Compose integration with health checks
+  - Environment variable validation
+  - Service startup and health monitoring
+  - Comprehensive deployment logging and status reporting
+
+- `deployment/docker-compose.yml` - Complete Docker deployment configuration:
+  - Redis service with persistence and health checks
+  - Main application service with proper environment configuration
+  - Background worker service for job processing
+  - Volume persistence for data and logs
+  - Network configuration and service dependencies
+
+- `deployment/Dockerfile` - Multi-stage Docker build:
+  - Python 3.11 slim base image
+  - Non-root user configuration for security
+  - Configuration validation during build
+  - Health check integration
+  - Proper file permissions and directory structure
+
+- `deployment/README.md` - Comprehensive deployment guide:
+  - Quick start instructions
+  - Environment configuration documentation
+  - Deployment options (Docker Compose and manual)
+  - SSL configuration guidelines
+  - Monitoring and troubleshooting guides
+  - Security considerations and best practices
+
+**Enhanced Settings Configuration:**
+- **Comprehensive Validation:**
+  - Field validators for URLs, log levels, and data types
+  - Range validation for numeric fields (file size, timeouts, ports)
+  - Format validation for Redis URLs, N8N webhook URLs, and database URLs
+  - Image type validation with supported MIME types
+  - Log file path validation with directory creation
+
+- **Production Security Checks:**
+  - CORS origin validation warnings for production
+  - SSL verification enforcement recommendations
+  - Token strength validation with security warnings
+  - Debug mode detection with appropriate warnings
+
+- **Startup Requirements Validation:**
+  - Required environment variable presence checking
+  - Database directory writability validation
+  - Log directory creation and permission checking
+  - Comprehensive error reporting with actionable messages
+
+**Redis Connection Enhancements:**
+- **Retry Logic Implementation:**
+  - Exponential backoff with configurable delays (1s to 30s maximum)
+  - Maximum retry attempts (3 attempts by default)
+  - Connection timeout and socket timeout configuration
+  - Health check interval configuration (30 seconds)
+
+- **SSL Support:**
+  - SSL certificate verification based on VERIFY_SSL setting
+  - Support for both redis:// and rediss:// schemes
+  - SSL certificate requirements configuration
+  - Connection pooling with SSL support
+
+- **Error Handling:**
+  - Specific exception handling for connection and timeout errors
+  - Structured logging with retry attempt information
+  - Graceful degradation with meaningful error messages
+  - Connection cleanup and resource management
+
+**SSL Configuration Features:**
+- **HTTPS Endpoint Support:**
+  - Configurable SSL verification for N8N webhook calls
+  - Support for self-signed certificates in development
+  - Production SSL enforcement with security warnings
+  - Certificate validation error handling
+
+- **Redis SSL Support:**
+  - SSL connection support for Redis with certificate verification
+  - Configurable SSL requirements based on environment
+  - SSL connection pooling and timeout configuration
+
+**Deployment Infrastructure:**
+- **Docker Compose Setup:**
+  - Redis service with persistence and memory limits
+  - Application service with health checks and volume mounts
+  - Worker service for background job processing
+  - Network isolation and service dependencies
+  - Environment variable configuration from .env file
+
+- **Configuration Validation:**
+  - Pre-deployment configuration validation script
+  - Docker build-time configuration checking
+  - Runtime configuration validation with startup checks
+  - Health check endpoints for monitoring
+
+- **Production Deployment:**
+  - Automated deployment script with validation
+  - Service health monitoring and status reporting
+  - Log aggregation and monitoring setup
+  - Backup and recovery documentation
+
+**Requirements Satisfied:**
+- 5.1: All configuration loaded from environment variables with Pydantic validation ✅
+- 5.2: Application fails to start with clear error messages for missing configuration ✅
+- 5.4: Redis connection with proper error messages and retry logic ✅
+- 5.5: SSL verification for HTTPS endpoints with configurable security ✅
+
+**Environment Variables Documented:**
+- **Required Variables:** N8N_WEBHOOK_URL, N8N_API_KEY, CALLBACK_SECRET_TOKEN
+- **Optional Variables:** Redis URL, database URL, logging configuration, SSL settings
+- **Development Variables:** Debug mode, CORS origins, log levels
+- **Production Variables:** Worker count, SSL enforcement, monitoring settings
+
+**Validation Features:**
+- URL format validation for Redis, N8N, and database connections
+- Numeric range validation for file sizes, timeouts, and ports
+- String length validation for security tokens and API keys
+- Directory permission validation for database and log files
+- SSL certificate validation for HTTPS endpoints
+
+**Deployment Options:**
+- **Docker Compose (Recommended):** Complete containerized deployment with Redis
+- **Manual Deployment:** Step-by-step instructions for traditional deployment
+- **Configuration Validation:** Standalone validation script for CI/CD pipelines
+- **Health Monitoring:** Comprehensive health checks and monitoring endpoints
+
+**Security Enhancements:**
+- Token strength validation with security recommendations
+- SSL verification enforcement for production environments
+- CORS origin validation with security warnings
+- Non-root user configuration in Docker containers
+- Sensitive data protection in logging and error messages
+
+**Monitoring and Troubleshooting:**
+- Configuration validation script for deployment verification
+- Health check endpoints for service monitoring
+- Comprehensive logging with structured output
+- Troubleshooting guide with common issues and solutions
+- Performance tuning recommendations for production
+
+**Next Steps:**
+Ready for Task 13: Write comprehensive unit tests
+
+### Task 12 Implementation Summary ✅
+
+**All Sub-tasks Completed Successfully:**
+
+1. **✅ Create .env.example file with all required environment variables**
+   - Comprehensive template with 60+ configuration options
+   - Detailed descriptions and examples for each variable
+   - Security considerations and best practices documented
+   - Development and production configuration sections
+
+2. **✅ Add configuration validation and startup checks**
+   - Enhanced Settings class with field validators and model validators
+   - Startup requirements validation with comprehensive error reporting
+   - Production security checks with warnings and recommendations
+   - Database and log directory validation with automatic creation
+
+3. **✅ Implement proper Redis connection retry logic**
+   - Exponential backoff retry mechanism (1s to 30s delays)
+   - Connection pooling with health checks and timeout configuration
+   - SSL support for secure Redis connections
+   - Comprehensive error handling and structured logging
+
+4. **✅ Add SSL verification for HTTPS endpoints**
+   - Configurable SSL verification for N8N webhook calls
+   - Support for development and production SSL configurations
+   - Certificate validation with proper error handling
+   - Security warnings for insecure configurations
+
+**Additional Deployment Infrastructure Created:**
+- Complete Docker Compose setup with Redis, application, and worker services
+- Production deployment script with automated validation and health checks
+- Configuration validation script for CI/CD pipeline integration
+- Comprehensive deployment documentation with troubleshooting guides
+
+**Requirements Satisfied:**
+- ✅ 5.1: Environment variable configuration with Pydantic validation
+- ✅ 5.2: Clear error messages for missing configuration
+- ✅ 5.4: Redis connection retry logic with proper error handling
+- ✅ 5.5: SSL verification for HTTPS endpoints
+
+**Task Status:** COMPLETED ✅

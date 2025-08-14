@@ -1,0 +1,105 @@
+# Docker Compose configuration for Accounting Automation Backend
+# This file provides a complete deployment setup with Redis and the application
+
+version: '3.8'
+
+services:
+  # Redis service for queue management
+  redis:
+    image: redis:7-alpine
+    container_name: accounting-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - accounting_network
+
+  # Main application service
+  app:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    container_name: accounting-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Redis Configuration
+      - REDIS_URL=redis://redis:6379
+      
+      # Required environment variables (set these in .env file)
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      - N8N_API_KEY=${N8N_API_KEY}
+      - CALLBACK_SECRET_TOKEN=${CALLBACK_SECRET_TOKEN}
+      
+      # Optional configurations
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - VERIFY_SSL=${VERIFY_SSL:-true}
+      - DEBUG=${DEBUG:-false}
+      - WORKERS=${WORKERS:-1}
+      
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - accounting_network
+
+  # RQ Worker service
+  worker:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    container_name: accounting-worker
+    restart: unless-stopped
+    command: python rq_worker.py
+    environment:
+      # Redis Configuration
+      - REDIS_URL=redis://redis:6379
+      
+      # Required environment variables (set these in .env file)
+      - N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL}
+      - N8N_API_KEY=${N8N_API_KEY}
+      - CALLBACK_SECRET_TOKEN=${CALLBACK_SECRET_TOKEN}
+      
+      # Optional configurations
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - VERIFY_SSL=${VERIFY_SSL:-true}
+      
+    volumes:
+      - app_logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    networks:
+      - accounting_network
+
+volumes:
+  redis_data:
+    driver: local
+  app_data:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  accounting_network:
+    driver: bridge
