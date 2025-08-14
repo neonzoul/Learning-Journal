@@ -5,6 +5,7 @@ Main application entry point for the Accounting Automation Backend.
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
+from app.api.v1.api import api_router
 from app.core.settings import settings
 from app.infrastructure.database import init_database
 
@@ -30,6 +31,9 @@ app = FastAPI(
     description="Backend API for automated receipt processing and Notion integration",
     lifespan=lifespan
 )
+
+# Include API routers
+app.include_router(api_router, prefix=settings.API_V1_STR)
 
 # Health check endpoint
 @app.get("/health")
