@@ -9,6 +9,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.infrastructure.database import get_database_session
+from app.infrastructure.queue import RQService, create_queue_service
 from app.services.logging_service import LoggingService
 
 
@@ -25,3 +26,16 @@ def get_logging_service(
         LoggingService instance configured with the database session
     """
     return LoggingService(db_session)
+
+
+def get_queue_service() -> RQService:
+    """
+    FastAPI dependency for queue service injection.
+    
+    Returns:
+        RQService instance configured with Redis connection
+        
+    Raises:
+        QueueConnectionError: If unable to connect to Redis
+    """
+    return create_queue_service()

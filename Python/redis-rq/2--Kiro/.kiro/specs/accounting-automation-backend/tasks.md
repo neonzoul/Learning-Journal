@@ -21,10 +21,6 @@
   - _Requirements: 6.1, 6.2, 6.3_
 
 - [x] 3. Create database infrastructure with SQLModel
-
-
-
-
   - Implement JobLog model with SQLModel for audit logging
   - Create database connection utilities and session management
   - Implement database table creation on startup
@@ -35,13 +31,13 @@
     model: Sonnet4.0"
   - _Requirements: 4.1, 4.2, 4.4_
 
-- [ ] 4. Implement Redis Queue infrastructure
+- [x] 4. Implement Redis Queue infrastructure
   - Create RQService class implementing QueueServiceProtocol
   - Set up Redis connection management with proper error handling
   - Implement job enqueueing functionality with timeout configuration
   - Create queue service dependency injection
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 2.1, 2.5, 5.4_
@@ -52,7 +48,7 @@
   - Add proper error handling for database operations
   - Implement logging service dependency injection
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 4.1, 4.2, 4.3, 4.5_
@@ -63,7 +59,7 @@
   - Add proper file handling for UploadFile objects
   - Implement task service dependency injection
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 1.2, 1.3, 2.1, 6.4_
@@ -74,7 +70,7 @@
   - Implement proper error responses for validation failures
   - Add multipart form data handling for file and notion_database_id
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 1.1, 1.3, 1.4, 1.5, 5.3_
@@ -85,7 +81,7 @@
   - Implement job status update logic via logging service
   - Add proper error handling for invalid tokens and missing jobs
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
@@ -96,7 +92,7 @@
   - Integrate RQ Dashboard for queue monitoring
   - Add health check endpoint
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 7.1, 7.2, 4.4_
@@ -107,7 +103,7 @@
   - Add proper base64 encoding for image data transmission
   - Implement comprehensive error handling and logging
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 2.2, 2.3, 2.4, 7.3_
@@ -118,7 +114,7 @@
   - Create error response models and consistent error formatting
   - Add logging for job processing metrics and system events
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 7.3, 7.5, 8.4_
@@ -129,7 +125,7 @@
   - Implement proper Redis connection retry logic
   - Add SSL verification for HTTPS endpoints
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 5.1, 5.2, 5.4, 5.5_
@@ -140,7 +136,7 @@
   - Test API endpoints using FastAPI TestClient
   - Add tests for Pydantic model validation and serialization
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
@@ -151,7 +147,7 @@
   - Test database operations with in-memory SQLite
   - Add tests for worker process and N8N webhook integration
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 2.1, 2.2, 4.1, 4.2_
@@ -162,7 +158,7 @@
   - Optimize database queries with proper indexing
   - Add metrics collection for queue depth and processing rates
   - After Completed Task Update Report to ..\.kiro\specs\accounting-automation-backend\Implemented-Report.md
-  - Commit with message pattern "keyword-Kiro: {message}
+  - Git commit -m "{commit keyword e.g.feat}-Kiro: {message}
     mode: spec
     model: Sonnet4.0"
   - _Requirements: 7.4, 8.1, 8.2, 8.3, 8.4_

@@ -159,3 +159,88 @@ ask 3: Create database infrastructure with SQLModel ✅
 
 **Next Steps:**
 Ready for Task 4: Implement Redis Queue infrastructure
+### Task 4:
+ Implement Redis Queue infrastructure ✅
+
+**Implementation Date:** 2025-01-14
+
+**Components Implemented:**
+- Complete Redis Queue (RQ) service implementation with robust error handling
+- Redis connection management with connection pooling and retry logic
+- Job enqueueing functionality with timeout configuration
+- Queue service dependency injection for FastAPI integration
+
+**Key Files Created:**
+- `app/infrastructure/queue.py` - Redis Queue service implementation:
+  - `RQService` class implementing `QueueServiceProtocol`
+  - `QueueConnectionError` and `JobEnqueueError` custom exceptions
+  - Redis connection management with health checks and retry logic
+  - Job enqueueing with timeout configuration and error handling
+  - Queue monitoring and statistics functionality
+  - Connection cleanup and resource management
+
+**Updated Files:**
+- `app/core/dependencies.py` - Added queue service dependency injection:
+  - `get_queue_service()` function for FastAPI dependency injection
+  - Import statements for RQService and factory function
+
+**RQService Features:**
+- **Connection Management:**
+  - Redis connection with connection pooling for performance
+  - Automatic connection health checks every 30 seconds
+  - Connection timeout and retry configuration
+  - Graceful connection cleanup on service shutdown
+
+- **Job Enqueueing:**
+  - Protocol-compliant job enqueueing with UUID job IDs
+  - Configurable job timeout from settings (default 5 minutes)
+  - Automatic retry on connection failures with reconnection logic
+  - Comprehensive error handling and logging
+
+- **Error Handling:**
+  - Custom exception types for different failure scenarios
+  - Automatic reconnection attempts on Redis connection failures
+  - Structured logging with job context for debugging
+  - Graceful degradation with meaningful error messages
+
+- **Monitoring:**
+  - Queue statistics including length, failed jobs, scheduled jobs
+  - Job registry information for different job states
+  - Comprehensive logging for job lifecycle events
+
+**Queue Configuration:**
+- Redis URL configuration from environment variables
+- Default queue name with support for multiple queues
+- Job timeout configuration from application settings
+- SSL verification support for secure Redis connections
+
+**Dependency Injection:**
+- `create_queue_service()` factory function for service instantiation
+- `get_queue_service()` FastAPI dependency for request injection
+- Proper error propagation for connection failures
+
+**Requirements Satisfied:**
+- 2.1: Redis Queue (RQ) used for task management with job persistence ✅
+- 2.5: Queued jobs persist in Redis and survive worker restarts ✅
+- 5.4: Redis connection with proper error messages and retry logic ✅
+
+**Error Handling Features:**
+- Connection failures handled with automatic retry logic
+- Job enqueueing failures with detailed error messages
+- Redis timeout handling with connection pooling
+- Structured logging for debugging and monitoring
+
+**Testing Verification:**
+- Redis connection and queue initialization tested successfully
+- Job enqueueing functionality verified with test jobs
+- Queue statistics and monitoring features confirmed
+- Error handling and retry logic validated
+- Connection cleanup and resource management tested
+
+**Integration Points:**
+- Ready for integration with TaskService for job creation
+- Compatible with existing logging service for job status tracking
+- Prepared for RQ worker integration for job processing
+
+**Next Steps:**
+Ready for Task 5: Build logging service for job status management
