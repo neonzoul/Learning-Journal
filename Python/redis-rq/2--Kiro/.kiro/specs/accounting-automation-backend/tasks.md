@@ -65,8 +65,6 @@
   - _Requirements: 1.2, 1.3, 2.1, 6.4_
 
 - [x] 7. Implement receipt upload API endpoint
-
-
   - Create receipts router with upload endpoint
   - Add comprehensive file validation (type, size, magic bytes)
   - Implement proper error responses for validation failures
@@ -77,7 +75,8 @@
     model: Sonnet4.0"
   - _Requirements: 1.1, 1.3, 1.4, 1.5, 5.3_
 
-- [ ] 8. Implement job callback API endpoint
+- [x] 8. Implement job callback API endpoint
+
   - Create jobs router with callback endpoint
   - Add authentication using secret token in headers
   - Implement job status update logic via logging service
