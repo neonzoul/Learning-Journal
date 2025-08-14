@@ -1,0 +1,42 @@
+# FastAPI and ASGI server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Pydantic for data validation and settings
+pydantic[email]==2.5.0
+pydantic-settings==2.1.0
+
+# Database ORM
+sqlmodel==0.0.14
+sqlalchemy==2.0.23
+
+# Redis and Queue management
+redis==5.0.1
+rq==1.15.1
+rq-dashboard==0.6.1
+
+# HTTP client for external API calls
+httpx==0.25.2
+
+# File handling and validation
+python-multipart==0.0.6
+python-magic==0.4.27
+
+# Logging and monitoring
+structlog==23.2.0
+
+# Development and testing dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+fakeredis==2.20.1
+pytest-mock==3.12.0
+
+# Type checking
+mypy==1.7.1
+types-redis==4.6.0.11
+
+# Code formatting and linting
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
