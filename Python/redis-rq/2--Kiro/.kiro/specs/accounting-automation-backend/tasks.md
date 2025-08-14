@@ -43,10 +43,6 @@
   - _Requirements: 2.1, 2.5, 5.4_
 
 - [x] 5. Build logging service for job status management
-
-
-
-
   - Implement LoggingService class for database operations
   - Create methods for initial job log creation and status updates
   - Add proper error handling for database operations
@@ -57,7 +53,11 @@
     model: Sonnet4.0"
   - _Requirements: 4.1, 4.2, 4.3, 4.5_
 
-- [ ] 6. Create task service for business logic orchestration
+- [x] 6. Create task service for business logic orchestration
+
+
+
+
   - Implement TaskService class with protocol-based dependencies
   - Create async method for job creation and enqueueing
   - Add proper file handling for UploadFile objects

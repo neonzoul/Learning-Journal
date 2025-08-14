@@ -332,3 +332,111 @@ Ready for Task 5: Build logging service for job status management
 
 **Next Steps:**
 Ready for Task 6: Create task service for business logic orchestration
+### Task 6: Create task service for business logic orchestration ✅
+
+**Implementation Date:** 2025-01-14
+
+**Components Implemented:**
+- Complete TaskService class for orchestrating receipt processing workflows
+- Async method for job creation and enqueueing with comprehensive error handling
+- Proper file handling for UploadFile objects with validation and content reading
+- FastAPI dependency injection for task service integration with protocol-based dependencies
+
+**Key Files Created:**
+- `app/services/task_service.py` - Core task orchestration service:
+  - `TaskService` class with protocol-based dependency injection
+  - `create_and_enqueue_job()` async method for complete job workflow
+  - `_read_file_contents()` private method for file handling and validation
+  - `get_job_status()` method for job status retrieval
+  - Comprehensive error handling and structured logging
+
+**Updated Files:**
+- `app/core/dependencies.py` - Added task service dependency injection:
+  - `get_task_service()` function with protocol-based dependencies
+  - Integration with existing queue and logging service dependencies
+- `app/services/__init__.py` - Added TaskService export for clean imports
+
+**TaskService Features:**
+- **Protocol-Based Design:**
+  - Uses `QueueServiceProtocol` for loose coupling with queue implementations
+  - Uses `LoggingServiceProtocol` for database operation abstraction
+  - Enables easy testing with mock implementations
+  - Follows dependency inversion principle
+
+- **Job Creation Workflow:**
+  - Generates unique UUID for each job if not provided
+  - Validates and reads file contents asynchronously
+  - Creates initial job log entry in database
+  - Enqueues job for background processing with all necessary metadata
+  - Returns structured response with job_id and status
+
+- **File Handling:**
+  - Async file content reading with proper error handling
+  - File pointer management (seek to beginning and reset after reading)
+  - Empty file validation with meaningful error messages
+  - Comprehensive logging of file operations with size and type information
+  - Graceful error handling with context preservation
+
+- **Error Management:**
+  - Structured logging with job context for debugging
+  - Exception propagation with meaningful error messages
+  - File operation error handling with cleanup
+  - Database operation error handling through service protocols
+
+**Method Implementations:**
+- `create_and_enqueue_job(file, notion_database_id, job_id=None)`:
+  - Complete async workflow for job creation
+  - File validation and content reading
+  - Database logging integration
+  - Queue service integration with metadata
+  - Returns `JobCreationResponse` with job details
+
+- `_read_file_contents(file)`:
+  - Private async method for file handling
+  - File pointer management and validation
+  - Empty file detection and error handling
+  - Proper cleanup with file pointer reset
+
+- `get_job_status(job_id)`:
+  - Job status retrieval through logging service
+  - Returns structured job information dictionary
+  - Error handling for missing jobs
+
+**Dependency Injection:**
+- `get_task_service()` FastAPI dependency function
+- Protocol-based dependency injection for queue and logging services
+- Follows established dependency injection patterns
+- Ready for API endpoint integration
+
+**Requirements Satisfied:**
+- 1.2: Generates unique job_id and enqueues processing task ✅
+- 1.3: Returns job_id and status "queued" via JobCreationResponse ✅
+- 2.1: Uses Redis Queue (RQ) through QueueServiceProtocol ✅
+- 6.4: Follows FastAPI's dependency system patterns ✅
+
+**Integration Features:**
+- Seamless integration with existing queue service (RQService)
+- Database integration through logging service protocol
+- File upload handling compatible with FastAPI UploadFile
+- Structured response models for API consistency
+
+**Error Handling:**
+- File reading errors with context preservation
+- Database operation errors through service protocols
+- Queue operation errors with proper logging
+- Comprehensive exception handling with structured logging
+
+**Logging and Monitoring:**
+- Structured logging with job context (job_id, filename, etc.)
+- File operation metrics (size, content type)
+- Job lifecycle event logging
+- Error logging with stack traces for debugging
+
+**Testing Readiness:**
+- Protocol-based design enables easy mocking for unit tests
+- Async methods compatible with pytest-asyncio
+- Clear separation of concerns for focused testing
+- Error scenarios well-defined for comprehensive test coverage
+
+**Next Steps:**
+Ready for Task 7: Implement receipt upload API endpoint
