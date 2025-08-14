@@ -3,7 +3,8 @@ Configuration management using Pydantic Settings.
 Handles environment variable loading and validation.
 """
 
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 from typing import Optional
 
 
