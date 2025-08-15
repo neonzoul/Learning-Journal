@@ -1,10 +1,10 @@
 import os
 import uuid
+
 from fastapi import FastAPI, UploadFile, File
 from redis import Redis
 from rq import Queue
 from typing import Dict
-
 
 
 # No longer need a direct import of the task function
